@@ -27,4 +27,6 @@ jobs:
       - name: Test utenti e importazione su database effimero
         env:
           POIMANAGER_TEST: '1'
-        run: php tests/utenti.php
+        run: |
+          php tests/utenti.php
+          php tests/ghost.php

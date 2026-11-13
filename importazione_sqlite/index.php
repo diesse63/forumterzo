@@ -16,11 +16,7 @@ try{
  if($_SERVER['REQUEST_METHOD']==='POST'){
   if(!hash_equals($_SESSION['csrf'],$_POST['csrf']??''))throw new RuntimeException('Sessione scaduta: ricaricare la pagina.');
   $action=$_POST['action']??'';
-  if($action==='login'){
-   if(time()<($_SESSION['retry_after']??0))throw new RuntimeException('Attendere prima di riprovare.');
-   if(!hash_equals($cfg['admin_password'],$_POST['password']??'')){$_SESSION['retry_after']=time()+5;throw new RuntimeException('Password non corretta.');}
-   session_regenerate_id(true);$_SESSION['authenticated']=time();
-  }else{
+  {
    if(empty($_SESSION['authenticated'])||time()-$_SESSION['authenticated']>1800)throw new RuntimeException('Accedere nuovamente.');
    $_SESSION['authenticated']=time();
    if($action==='logout'){
