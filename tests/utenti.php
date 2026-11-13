@@ -37,8 +37,9 @@ $q=$db->prepare('INSERT INTO Utenti (NomeIndice,ProfiloCifrato,PasswordHash,Ruol
 foreach([['admin','admin',1],['user','user',1],['esternobase','esternobase',0],['esternoevoluto','esternoevoluto',0]] as [$name,$role,$active])
  $q->execute([user_index($name),user_encrypt(['nome'=>$name,'email'=>'']),password_hash('1234567.',PASSWORD_DEFAULT),$role,$active]);
 $db->exec("INSERT INTO Pannelli VALUES ('utenti','Utenti'),('associazioni','Associazioni'),('mail','Mail'),('importazione','Importazione')");
+$db->exec("INSERT INTO Pannelli VALUES ('nuova_voce','Nuova voce')");
 $uid=(int)$db->query("SELECT ID FROM Utenti WHERE Ruolo='user'")->fetchColumn();
-$u=['ID'=>$uid,'Ruolo'=>'user'];ensure(!allowed($u,'associazioni'),'Default non nega');
+$u=['ID'=>$uid,'Ruolo'=>'user'];ensure(!allowed($u,'nuova_voce')&&!allowed($u,'nuova_voce','scrittura'),'Nuova voce concessa a user');ensure(allowed(['ID'=>1,'Ruolo'=>'admin'],'nuova_voce','scrittura'),'Nuova voce negata ad admin');ensure(!allowed($u,'associazioni'),'Default non nega');
 $db->exec("INSERT INTO UtentiPermessi VALUES ($uid,'associazioni','lettura'),($uid,'mail','scrittura'),($uid,'utenti','scrittura')");
 ensure(allowed($u,'associazioni')&&!allowed($u,'associazioni','scrittura'),'Lettura non rispettata');
 ensure(allowed($u,'mail','scrittura')&&!allowed($u,'utenti'),'Escalation permessi utenti');

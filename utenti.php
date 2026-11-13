@@ -51,17 +51,5 @@ foreach($db->query('SELECT * FROM Utenti ORDER BY ID') as $row){
  $p=user_decrypt($row['ProfiloCifrato']);echo '<tr><td>'.uh($p['nome']).'</td><td>'.uh($p['email']).'</td><td>'.uh($row['Ruolo']).'</td><td>'.((int)$row['Attivo']?'Attivo':'Disattivato').'</td><td><a href="?id='.(int)$row['ID'].'">Modifica</a></td></tr>';
 }
 echo '</table>'; ?>
-<h2><?= $edit?'Modifica utente':'Nuovo utente' ?></h2>
-<form method="post">
-<input type="hidden" name="csrf" value="<?=uh(csrf())?>">
-<input type="hidden" name="id" value="<?=(int)($edit['ID']??0)?>">
-<label>Nome di accesso<input name="nome" maxlength="100" required value="<?=uh($edit['Profilo']['nome']??'')?>"></label>
-<label>Email<input type="email" name="email" value="<?=uh($edit['Profilo']['email']??'')?>"></label>
-<label>Ruolo<select name="ruolo"><?php foreach(['admin','user','esternobase','esternoevoluto'] as $r)echo '<option value="'.$r.'" '.(($edit['Ruolo']??'user')===$r?'selected':'').'>'.uh($r==='esternoevoluto'?'esterno evoluto':$r).'</option>'; ?></select></label>
-<label><input type="checkbox" name="attivo" <?=(!$edit||(int)$edit['Attivo'])?'checked':''?>> Attivo (ignorato per i ruoli esterni)</label>
-<label><?= $edit?'Nuova password, lasciare vuota per mantenerla':'Password' ?><input type="password" name="password" autocomplete="new-password" <?= $edit?'':'required' ?>></label>
-<p>Minimo 7 caratteri e uno speciale. Permessi solo per user; nessuna selezione significa nessun accesso.</p>
-<table><tr><th>Schermata</th><th>Accesso</th></tr>
-<?php foreach($panels as $p):if(in_array($p['Codice'],['utenti','importazione'],true))continue; ?>
-<tr><td><?=uh($p['Titolo'])?></td><td><select name="permessi[<?=uh($p['Codice'])?>]"><?php foreach(['nessuno'=>'Nessuno','lettura'=>'Sola lettura','scrittura'=>'Lettura e scrittura'] as $v=>$label)echo '<option value="'.$v.'" '.(($perms[$p['Codice']]??'nessuno')===$v?'selected':'').'>'.uh($label).'</option>'; ?></select></td></tr>
-<?php endforeach; ?></table><button>Salva utente e permessi</button></form></main></body></html>
+<?php require __DIR__.'/includes/utenti_form.php'; ?>
+</main></body></html>

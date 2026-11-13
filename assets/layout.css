@@ -23,3 +23,7 @@ a{color:#125d91}aside{padding:14px;background:#e5effb;margin:16px 0;border-radiu
 table{width:100%;border-collapse:collapse;overflow-wrap:anywhere}th,td{padding:10px;text-align:left;border-bottom:1px solid #d4dfe7}
 td input,td select{max-width:100%}
 @media(max-width:650px){.app-header{padding:16px 20px}.menu-bar{padding:0 8px;gap:0}.menu-link,.menu-toggle{padding:11px 12px}.page-main{margin:16px 10px;padding:18px}.submenu{min-width:200px}.menu-item:last-child .submenu{left:auto;right:0}label input:not([type=checkbox]):not([type=radio]){display:block;width:100%;margin:6px 0 0}th,td{padding:7px}table{font-size:14px}}
+
+[hidden]{display:none!important}
+.user-permissions{border:0;padding:0;margin:16px 0;min-width:0}
+.password-requirement{font-size:15px}

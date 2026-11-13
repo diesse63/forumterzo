@@ -10,3 +10,5 @@ Leggere e rispettare LAYOUT.md per ogni nuova pagina o modifica dell'interfaccia
 - Usare page_start() e assets/layout.css e assets/menu.js. Non duplicare il layout nelle pagine.
 - Controllare i permessi sul server prima dell'output; nascondere il menu non sostituisce l'autorizzazione.
 - Aggiornare sempre il repository GitHub con le modifiche al codice.
+
+- Ogni nuova voce/pannello: admin ha tutti i poteri automaticamente; user nessun permesso fino ad assegnazione esplicita. Nessuna concessione automatica ai nuovi pannelli.

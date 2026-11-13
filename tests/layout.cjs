@@ -8,6 +8,7 @@ const path=require('path');
  const server=http.createServer((req,res)=>{
   if(req.url==='/assets/layout.css'){res.setHeader('Content-Type','text/css');res.end(fs.readFileSync(path.join(base,'assets/layout.css')));}
   else if(req.url==='/assets/menu.js'){res.setHeader('Content-Type','application/javascript');res.end(fs.readFileSync(path.join(base,'assets/menu.js')));}
+  else if(req.url==='/assets/utenti.js'){res.setHeader('Content-Type','application/javascript');res.end(fs.readFileSync(path.join(base,'assets/utenti.js')));}
   else {res.setHeader('Content-Type','text/html');res.end(html);}
  });
  await new Promise(r=>server.listen(0,'127.0.0.1',r));
@@ -37,6 +38,22 @@ const path=require('path');
   check(await page.locator('.menu-toggle[aria-expanded=true]').count()===0,'Escape');
   await services.focus();await page.keyboard.press('ArrowDown');
   check(await users.evaluate(a=>a===document.activeElement),'Focus tastiera');
+  const role=page.locator('#user-role'), permissions=page.locator('#user-permissions');
+  check(await permissions.isVisible(),'Permessi user visibili');
+  check(await page.locator('select[name="permessi[associazioni]"]').inputValue()==='lettura','Permesso caricato');
+  check(await page.locator('select[name="permessi[nuovo]"]').inputValue()==='nessuno','Nuovo pannello negato');
+  const pw=page.locator('input[name=password]');
+  check((await pw.locator('..').textContent()).includes('(Minimo 7 caratteri e uno speciale)'),'Requisito password nel label');
+  for(const value of ['admin','esternobase','esternoevoluto']){
+   await role.selectOption(value);
+   check(!await permissions.isVisible()&&await permissions.isDisabled(),'Permessi nascosti e disabilitati');
+   check(await page.locator('select[name="permessi[associazioni]"]').inputValue()==='nessuno','Permessi azzerati');
+   check(await page.locator('form').evaluate(form=>![...new FormData(form).keys()].some(k=>k.startsWith('permessi['))),'Permessi esclusi dal POST');
+   await role.selectOption('user');
+   check(await permissions.isVisible()&&!await permissions.isDisabled(),'Ritorno user');
+   check(await page.locator('select[name="permessi[associazioni]"]').inputValue()==='nessuno','Permessi non ripristinati');
+   await page.locator('select[name="permessi[associazioni]"]').selectOption('scrittura');
+  }
   await page.setViewportSize({width:375,height:900});
   check(!await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),'Overflow mobile');
   console.log('OK: layout PHP comune, font, percorso Servizi > Utenti, menu click esterno/selezione, tastiera e mobile.');
