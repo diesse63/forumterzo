@@ -43,7 +43,17 @@ function source(string $file,array $map): PDO {
  $actual=$s->query("SELECT name,sql FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'")->fetchAll(PDO::FETCH_KEY_PAIR);
  foreach ($map['ignored_source_tables'] ?? [] as $ignored) unset($actual[$ignored]);
  $names=array_keys($actual); $expected=array_keys($map['tables']);sort($names);sort($expected);
- if ($names!==$expected) throw new RuntimeException('Tabelle SQLite diverse dalla versione supportata. Aggiornare la mappatura.');
+ if ($names!==$expected) {
+  $missing=array_values(array_diff($expected,$names));
+  $extra=array_values(array_diff($names,$expected));
+  $details=['Tabelle SQLite non compatibili con la mappa '.(string)$map['version'].'.'];
+  if($missing)$details[]='Mancanti: '.implode(', ',$missing).'.';
+  if($extra)$details[]='Aggiuntive: '.implode(', ',$extra).'.';
+  $details[]='Attese: '.implode(', ',$expected).'.';
+  $details[]='Rilevate: '.implode(', ',$names).'.';
+  $details[]='Utenti SQLite ignorati. Nessun dato importato. Verificare il file selezionato e aggiornare la mappatura in base alla struttura effettiva, senza eliminare tabelle dal sorgente.';
+  throw new RuntimeException(implode(' ',$details));
+ }
  foreach($map['tables'] as $t=>$spec) if(normSql($actual[$t])!==normSql($spec['source_sql'])) throw new RuntimeException('Struttura SQLite cambiata: '.$t.'. Aggiornare la procedura.');
  return $s;
 }
