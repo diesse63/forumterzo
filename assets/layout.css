@@ -27,3 +27,5 @@ td input,td select{max-width:100%}
 [hidden]{display:none!important}
 .user-permissions{border:0;padding:0;margin:16px 0;min-width:0}
 .password-requirement{font-size:15px}
+
+@media(max-width:650px){.app-nav{position:relative}.menu-item{position:static}.submenu,.menu-item:last-child .submenu{position:absolute;left:10px;right:10px;top:100%;min-width:0;max-width:none}}
