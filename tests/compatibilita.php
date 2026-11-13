@@ -26,3 +26,5 @@ foreach(['http://poimanager.altervista.org/private/prova_'.str_repeat('a',32).'.
  $rejected=false;try{protection_http_status($url);}catch(RuntimeException $e){$rejected=true;}check_compat($rejected,'Origine o percorso non autorizzato');
 }
 echo 'OK: cifratura '.$chosen.', rilevamento HTTPS '.protection_transport().', integrità, chiave errata e risposte HTTP.'."\n";
+
+foreach(["HTTP/2 403\r\n","HTTP/3 403\r\n","HTTP/1.0 403 Forbidden\r\n"] as $line)check_compat(protection_status_code($line)===403,'Status HTTP non riconosciuto');

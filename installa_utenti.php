@@ -16,8 +16,7 @@ try {
   $name='prova_'.bin2hex(random_bytes(16)).'.txt';$probe=__DIR__.'/private/'.$name;
   if(file_put_contents($probe,'Verifica non riservata')===false)throw new RuntimeException('Cartella private non scrivibile.');
   try{
-   $status=protection_http_status('https://poimanager.altervista.org/private/'.$name);
-   if($status!==403)throw new RuntimeException('Protezione private non verificata: occorre HTTP 403.');
+   protection_require_403('https://poimanager.altervista.org/private/'.$name,'private');
   }finally{@unlink($probe);}
   $db=poimanager_db();$q=$db->query("SELECT GET_LOCK('poimanager_setup_utenti',0)");
   if((int)$q->fetchColumn()!==1)throw new RuntimeException('Installazione già in corso.');
