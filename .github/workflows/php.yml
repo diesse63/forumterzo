@@ -32,6 +32,7 @@ jobs:
           php tests/ghost.php
       - name: Compatibilità cifratura e HTTPS senza Sodium e cURL
         run: |
+          php tests/deposito.php
           php tests/compatibilita.php
           php -d disable_functions=sodium_crypto_secretbox,sodium_crypto_secretbox_open,curl_init,curl_exec tests/compatibilita.php
       - name: Verifica layout e menu nel browser
