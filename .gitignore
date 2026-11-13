@@ -2,3 +2,7 @@
 /importazione_sqlite/config.php
 /private/*.bak
 /private/*.zip
+
+/importazione_sqlite/data/*
+!/importazione_sqlite/data/.htaccess
+!/importazione_sqlite/data/index.php

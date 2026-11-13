@@ -14,7 +14,7 @@ Sito: https://poimanager.altervista.org/
 7. Aprire https://poimanager.altervista.org/importazione_sqlite/index.php tramite HTTPS.
 
 La cartella `private` dentro la radice pubblica è protetta via Apache: la protezione dipende dall'effettiva applicazione di `.htaccess`. Se disponibile, preferire una directory fuori dalla radice pubblica e adattare il percorso del caricatore in `includes/database.php`.
-I file SQLite e i registri restano obbligatoriamente fuori dalla radice pubblica, secondo il controllo già presente nell'importatore.
+Il deposito può essere esterno oppure nella cartella protetta `importazione_sqlite/data` descritta sotto.
 
 ## Git e WinSCP
 
@@ -39,3 +39,11 @@ try {
 ```
 
 La connessione non esegue migrazioni né importazioni. L'importatore mantiene controlli MySQL, transazioni e mappatura esistenti. Ogni futura modifica strutturale richiede ancora l'aggiornamento coordinato della procedura di importazione.
+
+## Deposito sul sito
+
+Impostare nel file reale `private/config.php`:
+```php
+'private_dir' => dirname(__DIR__) . '/importazione_sqlite/data',
+```
+Caricare prima `importazione_sqlite/data/.htaccess` con WinSCP, quindi il codice. Non sovrascrivere password e credenziali. La cartella deve essere scrivibile. Prima di analisi e importazione viene controllata una sonda HTTPS non riservata sul sito POImanager: occorre risposta HTTP 403. Serve PHP cURL; in caso di errore la procedura si blocca prima di acquisire file. Il deposito esterno alla radice resta supportato. Escludere il contenuto di data dalla sincronizzazione ordinaria e dalle cancellazioni remote; sincronizzare invece `.htaccess` e `index.php`. Nessuna verifica live è stata eseguita in questo aggiornamento.

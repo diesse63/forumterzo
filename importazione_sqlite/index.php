@@ -5,6 +5,7 @@ header('Cache-Control: no-store'); header('X-Content-Type-Options: nosniff');hea
 session_name('sqlite_import_admin');session_set_cookie_params(['httponly'=>true,'secure'=>(!empty($_SERVER['HTTPS'])&&$_SERVER['HTTPS']!=='off'),'samesite'=>'Strict']);session_start();
 require_once dirname(__DIR__).'/includes/database.php';
 require __DIR__.'/motore.php';
+require __DIR__.'/deposito.php';
 function h($s):string{return htmlspecialchars((string)$s,ENT_QUOTES|ENT_SUBSTITUTE,'UTF-8');}
 $_SESSION['csrf']??=bin2hex(random_bytes(32));$message='';$report=null;$error=false;
 try{
@@ -24,8 +25,7 @@ try{
     if(isset($_SESSION['upload']))@unlink($_SESSION['upload']['path']);
     $_SESSION=[];session_destroy();header('Location: index.php');exit;
    }
-   $dir=realpath($cfg['private_dir']);$root=realpath($_SERVER['DOCUMENT_ROOT']??__DIR__);
-   if(!$dir||!is_writable($dir)||($root&&($dir===$root||str_starts_with($dir,$root.DIRECTORY_SEPARATOR))))throw new RuntimeException('Configurare private_dir come directory esistente, scrivibile e fuori dallo spazio web.');
+   $dir=import_private_dir($cfg['private_dir']);
    $map=mapping();$p=db($cfg);
    if($action==='analyse'){
     if(isset($_SESSION['upload'])){@unlink($_SESSION['upload']['path']);unset($_SESSION['upload']);}

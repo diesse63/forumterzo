@@ -9,7 +9,7 @@ Questa procedura legge direttamente un file SQLite aggiornato: i dati non sono i
 3. `struttura_solo_mysql8.sql` serve esclusivamente per installazioni nuove con le tabelle assenti. Non eseguirlo sulle tabelle già create. Anche questo file non contiene dati.
 4. Caricare la cartella del pacchetto sul sito, ad esempio `/importazione_sqlite/`. Mantenerla separata dall'applicazione originale. Conservare `.htaccess`, che impedisce lo scaricamento dei file interni. Verificare che un URL verso `mappa_v1.json` risponda 403. Se il server rifiuta `Options -Indexes`, rimuovere solo quella riga conservando FilesMatch.
 5. Caricare anche le cartelle `includes` e `private` nella radice del sito. Copiare `private/config.esempio.php` in `private/config.php`. Host `localhost`, utente `poimanager`, database `my_poimanager`; password DB vuota come indicato, da compilare solo se richiesta dal servizio. Impostare una password amministrativa unica di almeno 16 caratteri. Non usare quella di un account applicativo. Eliminare eventuali vecchi `importazione_sqlite/config.php` dopo la migrazione. Leggere `CONNESSIONE_DB.md` per protezione e sincronizzazione WinSCP.
-6. Predisporre una directory scrivibile da PHP fuori dalla radice pubblica del sito e indicarne il percorso assoluto in `private_dir`. Non basta creare una cartella dentro lo spazio web. Se il piano non permette una directory non pubblica, fermarsi: serve adattare il deposito al piano, non disabilitare il controllo. Caricamenti SQLite e registro contengono informazioni amministrative e non vanno resi scaricabili.
+6. Usare la cartella protetta `importazione_sqlite/data` come descritto nella sezione Deposito sul sito in fondo al documento.
 7. Aprire tramite HTTPS `https://poimanager.altervista.org/importazione_sqlite/index.php` e accedere con la password amministrativa impostata. È un accesso separato: questo pacchetto non modifica né integra il login dell'applicazione, il cui codice attuale non è stato fornito.
 8. Mettere l'applicazione di destinazione in manutenzione durante l'importazione, per evitare scritture concorrenti. Il lock della procedura coordina le importazioni, non le altre pagine del sito.
 
@@ -50,3 +50,11 @@ Campi testuali indicizzati VARBINARY(768) per preservare il confronto byte per b
 ## Validazione del pacchetto
 
 Controllata la corrispondenza della mappa con lo schema e le righe del file fornito. Nessun server AlterVista è stato contattato né modificato. Il collaudo reale PHP/MySQL dipende dalla disponibilità dei driver, dei permessi e della directory privata sull'hosting. Consultare VALIDAZIONE.txt per i controlli effettivamente eseguiti.
+
+## Deposito sul sito
+
+Impostare nel file reale `private/config.php`:
+```php
+'private_dir' => dirname(__DIR__) . '/importazione_sqlite/data',
+```
+Caricare prima `importazione_sqlite/data/.htaccess` con WinSCP, quindi il codice. Non sovrascrivere password e credenziali. La cartella deve essere scrivibile. Prima di analisi e importazione viene controllata una sonda HTTPS non riservata sul sito POImanager: occorre risposta HTTP 403. Serve PHP cURL; in caso di errore la procedura si blocca prima di acquisire file. Il deposito esterno alla radice resta supportato. Escludere il contenuto di data dalla sincronizzazione ordinaria e dalle cancellazioni remote; sincronizzare invece `.htaccess` e `index.php`. Nessuna verifica live è stata eseguita in questo aggiornamento.

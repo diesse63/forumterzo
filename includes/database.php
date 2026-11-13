@@ -20,6 +20,9 @@ function poimanager_config(): array
             throw new RuntimeException('Configurazione database incompleta.');
         }
     }
+    if (($loaded['private_dir'] ?? '') === '/PERCORSO_NON_PUBBLICO/importazioni_private') {
+        $loaded['private_dir'] = dirname(__DIR__) . '/importazione_sqlite/data';
+    }
     return $config = $loaded;
 }
 function poimanager_db(): PDO
