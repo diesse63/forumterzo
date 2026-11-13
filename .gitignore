@@ -8,3 +8,5 @@
 !/importazione_sqlite/data/index.php
 
 /private/security.php
+
+/private/email_*.php

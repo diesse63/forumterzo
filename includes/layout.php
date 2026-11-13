@@ -29,6 +29,7 @@ function layout_start(string $title, string $description='', array $context=[]):
   $services=[];
   if(allowed($user,'utenti','scrittura'))$services[]=['label'=>'Utenti','url'=>'/utenti.php'];
   if(allowed($user,'importazione','scrittura'))$services[]=['label'=>'Importazione SQLite','url'=>'/importazione_sqlite/index.php'];
+  if(allowed($user,'gestione_email'))$services[]=['label'=>'Gestione email','url'=>'/gestione_email.php'];
   if($user['Ruolo']!=='ghost')$services[]=['label'=>'Cambia password','url'=>'/cambia_password.php'];
   if($services)$items[]=['label'=>'Servizi','children'=>$services];
   $items[]=['label'=>'Sessione','children'=>[['label'=>'Esci','url'=>'/logout.php']]];

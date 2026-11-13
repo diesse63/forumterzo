@@ -32,6 +32,7 @@ jobs:
           php tests/import_tabelle.php
           php tests/check_schema.php
           php tests/anagrafica.php
+          php tests/email.php
           php tests/ghost.php
       - name: Compatibilità cifratura e HTTPS senza Sodium e cURL
         run: |
@@ -46,3 +47,5 @@ jobs:
           npm install --no-save --package-lock=false playwright@1.56.1
           node tests/layout.cjs
           node tests/anagrafica.cjs
+          node tests/bridge.cjs
+          node tests/email.cjs
