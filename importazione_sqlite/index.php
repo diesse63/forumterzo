@@ -56,6 +56,11 @@ try{
  $error=true;
  $message=$e instanceof PDOException?'Operazione bloccata da un vincolo o errore database (SQLSTATE '.$e->getCode().'). Tutte le modifiche di questo import sono annullate. Verificare chiavi univoche e riferimenti.':$e->getMessage();
 }
+// Aggiorna anche gli inventari salvati in sessione con la vecchia interfaccia.
+if(isset($_SESSION['upload']['inventory'])&&is_file($_SESSION['upload']['path']??'')){
+ try{$inventorySource=table_source($_SESSION['upload']['path']);$_SESSION['upload']['inventory']=table_inventory($inventorySource,$map);$inventorySource=null;}
+ catch(Throwable $inventoryError){$error=true;$message='Impossibile aggiornare l’elenco delle tabelle: ricaricare il file SQLite.';}
+}
 page_start('Importazione SQLite','Seleziona le tabelle, verifica l’anteprima e inserisci o aggiorna i dati rispettando i vincoli.',['Servizi','Importazione SQLite']);
 if($message)echo '<aside'.($error?' class="error"':'').'>'.uh($message).'</aside>';
 ?>
@@ -67,10 +72,13 @@ if($message)echo '<aside'.($error?' class="error"':'').'>'.uh($message).'</aside
 </form>
 <?php $upload=$_SESSION['upload']??null;if(isset($upload['inventory'])): ?>
 <form method="post"><input type="hidden" name="csrf" value="<?=uh(csrf())?>"><input type="hidden" name="action" value="preview">
-<table><tr><th>Importa</th><th>Tabella sorgente</th><th>Righe</th><th>Disponibilità</th></tr>
+<table><tr><th>Importa</th><th>Tabella</th><th>Righe SQLite</th><th>Disponibilità</th><th>Collegamenti in uscita</th><th>Collegamenti in ingresso</th></tr>
 <?php foreach($upload['inventory'] as $t=>$entry): ?>
-<tr><td><input type="checkbox" name="tables[]" value="<?=uh($t)?>" aria-label="Importa <?=uh($t)?>" <?=$entry['enabled']?'':'disabled'?> <?=in_array($t,$upload['requested']??[],true)?'checked':''?>></td><td><?=uh($t)?></td><td><?=(int)$entry['count']?></td><td><?=uh($entry['reason']?:'Inserimento e aggiornamento')?></td></tr>
+<tr><td><input type="checkbox" name="tables[]" value="<?=uh($t)?>" aria-label="Importa <?=uh($t)?>" <?=$entry['enabled']?'':'disabled'?> <?=in_array($t,$upload['requested']??[],true)?'checked':''?>></td><td><?=uh($t)?></td><td><?=$entry['count']===null?'—':(int)$entry['count']?></td><td><?=uh($entry['reason']?:'Presente nel file · Inserimento e aggiornamento')?></td>
+<td><?php if($entry['outgoing']):?><ul><?php foreach($entry['outgoing'] as $relation):?><li><?=uh($relation)?></li><?php endforeach;?></ul><?php else:?>Nessun collegamento dichiarato<?php endif;?></td>
+<td><?php if($entry['incoming']):?><ul><?php foreach($entry['incoming'] as $relation):?><li><?=uh($relation)?></li><?php endforeach;?></ul><?php else:?>Nessun collegamento dichiarato<?php endif;?></td></tr>
 <?php endforeach;?></table>
+<p>L’elenco include le tabelle presenti in SQLite e tutte quelle previste dalla mappa MySQL. Una tabella assente, come Soggetti nella variante con Referenti e AltriSoggetti, è visibile ma non selezionabile. I collegamenti distinguono FK SQLite, FK MySQL previste e vincoli logici applicati. Le FK MySQL mostrate descrivono il contratto della mappa; lo schema reale viene verificato nell’anteprima.</p>
 <p>Vengono aggiunte automaticamente le tabelle necessarie per i riferimenti, nell’ordine corretto. Le tabelle non mappate restano escluse; una dipendenza assente o incompatibile blocca la selezione.</p>
 <button>2. Prepara anteprima delle tabelle selezionate</button></form>
 <?php $rows=$report??($upload['plan']['report']??null);if($rows): ?>

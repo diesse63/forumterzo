@@ -22,9 +22,38 @@ function table_inventory(PDO $s,array $map): array {
    $missing=array_diff($required,$columns);
    if($missing)$reason='Colonne sorgente mancanti: '.implode(', ',$missing);
   }
-  $result[$t]=['count'=>(int)$s->query('SELECT COUNT(*) FROM '.qi($t))->fetchColumn(),'reason'=>$reason,'enabled'=>$reason===''];
+  $result[$t]=['present'=>true,'count'=>(int)$s->query('SELECT COUNT(*) FROM '.qi($t))->fetchColumn(),'reason'=>$reason,'enabled'=>$reason===''];
  }
+ foreach($map['tables'] as $t=>$spec)if(!isset($result[$t]))$result[$t]=['present'=>false,'count'=>null,'reason'=>'Tabella prevista in MySQL ma assente nel file SQLite','enabled'=>false];
+ $relations=table_relationships($s,$map);
+ foreach($result as $t=>&$entry){
+  $entry['outgoing']=[];$entry['incoming']=[];
+  foreach($relations as $rel){
+   $label=implode(' / ',$rel['origins']);
+   if($rel['from_table']===$t)$entry['outgoing'][]=$rel['from_column'].' → '.$rel['to_table'].'.'.$rel['to_column'].' ('.$label.')';
+   if($rel['to_table']===$t)$entry['incoming'][]=$rel['from_table'].'.'.$rel['from_column'].' → '.$rel['to_column'].' ('.$label.')';
+  }
+  if(in_array($t,['Mail','Telefono'],true))$entry['outgoing'][]='TipoSoggetto + IDSoggetto: riferimento polimorfico; destinazione non dichiarata da una FK, da verificare.';
+ }
+ unset($entry);ksort($result);
  return $result;
+}
+function table_relationships(PDO $s,array $map): array {
+ $edges=[];
+ $add=function(string $from,string $column,string $to,string $ref,string $origin)use(&$edges):void{
+  $key=json_encode([$from,$column,$to,$ref],JSON_THROW_ON_ERROR);
+  if(!isset($edges[$key]))$edges[$key]=['from_table'=>$from,'from_column'=>$column,'to_table'=>$to,'to_column'=>$ref,'origins'=>[]];
+  if(!in_array($origin,$edges[$key]['origins'],true))$edges[$key]['origins'][]=$origin;
+ };
+ foreach($s->query("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'") as $row){
+  $t=$row['name'];
+  foreach($s->query('PRAGMA foreign_key_list('.qi($t).')') as $fk)$add($t,(string)$fk['from'],(string)$fk['table'],(string)($fk['to']?:'(chiave primaria)'),'FK SQLite');
+ }
+ foreach($map['tables'] as $t=>$spec){
+  foreach($spec['fk'] as $fk)$add($t,$fk['column'],$fk['table'],$fk['ref'],'FK MySQL prevista');
+  foreach($spec['logical_fk']??[] as $fk)$add($t,$fk['column'],$fk['table'],$fk['ref'],'vincolo logico applicato');
+ }
+ return array_values($edges);
 }
 function table_order(array $selected,array $map,array $inventory): array {
  if(!$selected)throw new RuntimeException('Selezionare almeno una tabella.');

@@ -33,6 +33,7 @@ jobs:
           php tests/ghost.php
       - name: Compatibilità cifratura e HTTPS senza Sodium e cURL
         run: |
+          php tests/relazioni_tabelle.php
           php tests/schema_sqlite.php
           php tests/deposito.php
           php tests/compatibilita.php
