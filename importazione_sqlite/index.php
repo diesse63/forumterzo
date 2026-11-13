@@ -1,57 +1,84 @@
 <?php
 declare(strict_types=1);
-ini_set('display_errors','0');
-header('Cache-Control: no-store'); header('X-Content-Type-Options: nosniff');header("Content-Security-Policy: default-src 'self'; style-src 'unsafe-inline'; form-action 'self'; frame-ancestors 'none'");
 require_once dirname(__DIR__).'/includes/auth.php';
 require_access('importazione','scrittura');
-$_SESSION['authenticated']=time();
-require_once dirname(__DIR__).'/includes/database.php';
-require __DIR__.'/motore.php';
-require __DIR__.'/deposito.php';
-function h($s):string{return htmlspecialchars((string)$s,ENT_QUOTES|ENT_SUBSTITUTE,'UTF-8');}
-$_SESSION['csrf']??=bin2hex(random_bytes(32));$message='';$report=null;$error=false;
+require_once __DIR__.'/tabelle.php';
+require_once __DIR__.'/deposito.php';
+$map=table_mapping();$message='';$error=false;$report=null;
 try{
  $cfg=poimanager_config();
-
  if($_SERVER['REQUEST_METHOD']==='POST'){
-  if(!hash_equals($_SESSION['csrf'],$_POST['csrf']??''))throw new RuntimeException('Sessione scaduta: ricaricare la pagina.');
-  $action=$_POST['action']??'';
-  {
-   if(empty($_SESSION['authenticated'])||time()-$_SESSION['authenticated']>1800)throw new RuntimeException('Accedere nuovamente.');
-   $_SESSION['authenticated']=time();
-   if($action==='logout'){
-    if(isset($_SESSION['upload']))@unlink($_SESSION['upload']['path']);
-    $_SESSION=[];session_destroy();header('Location: index.php');exit;
-   }
+  check_csrf();$action=(string)($_POST['action']??'');
+  if($action==='remove'){
+   if(isset($_SESSION['upload']['path']))@unlink($_SESSION['upload']['path']);
+   unset($_SESSION['upload']);$message='File temporaneo eliminato.';
+  }elseif($action==='upload'){
    $dir=import_private_dir($cfg['private_dir']);
-   $map=mapping();$p=db($cfg);
-   if($action==='analyse'){
-    if(isset($_SESSION['upload'])){@unlink($_SESSION['upload']['path']);unset($_SESSION['upload']);}
-    $u=$_FILES['sqlite']??null;
-    if(!$u||$u['error']!==UPLOAD_ERR_OK||$u['size']>$cfg['max_bytes'])throw new RuntimeException('Caricamento fallito o file troppo grande. Verificare anche upload_max_filesize e post_max_size.');
-    $path=$dir.'/sqlite_'.bin2hex(random_bytes(20)).'.db';
-    if(!move_uploaded_file($u['tmp_name'],$path))throw new RuntimeException('Impossibile acquisire il file.');chmod($path,0600);
-    try{$s=source($path,$map);inspectTarget($p,$map);$counts=scan($s,$map);}catch(Throwable $e){@unlink($path);throw $e;}
-    $_SESSION['upload']=['path'=>$path,'sha256'=>hash_file('sha256',$path),'map'=>hash_file('sha256',__DIR__.'/mappa_v2.json'),'time'=>time(),'counts'=>$counts];
-    $report=$counts;$message='Analisi completata. Nessun dato scritto. Controllare i conteggi e avviare l’importazione.';
-   }elseif($action==='import'){
-    $u=$_SESSION['upload']??null;
-    if(!$u||time()-$u['time']>1800)throw new RuntimeException('Analisi scaduta: caricare nuovamente il file.');
-    if(!hash_equals($u['sha256'],hash_file('sha256',$u['path']))||!hash_equals($u['map'],hash_file('sha256',__DIR__.'/mappa_v2.json')))throw new RuntimeException('File o mappatura cambiati. Ripetere l’analisi.');
-    $s=source($u['path'],$map);$counts=scan($s,$map);$report=importData($p,$s,$map,$counts);
-    $log=['date'=>gmdate('c'),'mapping'=>$map['version'],'source_sha256'=>$u['sha256'],'counts'=>$report,'outcome'=>'COMMIT'];
-    $logged=file_put_contents($dir.'/importazioni.jsonl',json_encode($log,JSON_THROW_ON_ERROR)."\n",FILE_APPEND|LOCK_EX)!==false;
-    $s=null;@unlink($u['path']);unset($_SESSION['upload']);$message='Importazione completata e dati verificati: '.array_sum($report).' record.'.($logged?'':' Il registro su file non è stato salvato.');
+   if(isset($_SESSION['upload']['path']))@unlink($_SESSION['upload']['path']);
+   unset($_SESSION['upload']);
+   $u=$_FILES['sqlite']??null;
+   if(!$u||$u['error']!==UPLOAD_ERR_OK||$u['size']>$cfg['max_bytes'])throw new RuntimeException('Caricamento fallito o file troppo grande.');
+   $path=$dir.'/sqlite_'.bin2hex(random_bytes(20)).'.db';
+   if(!move_uploaded_file($u['tmp_name'],$path))throw new RuntimeException('Impossibile acquisire il file.');
+   chmod($path,0600);
+   try{$s=table_source($path);$inventory=table_inventory($s,$map);$s=null;}
+   catch(Throwable $e){@unlink($path);throw $e;}
+   $_SESSION['upload']=['path'=>$path,'sha256'=>hash_file('sha256',$path),'map'=>hash_file('sha256',__DIR__.'/mappa_v3.json'),'time'=>time(),'inventory'=>$inventory];
+   $message='File letto. Selezionare le tabelle da aggiornare. Nessun dato importato.';
+  }elseif(in_array($action,['preview','import'],true)){
+   $u=$_SESSION['upload']??null;
+   if(!$u||!isset($u['inventory'])||time()-$u['time']>1800||!is_file($u['path']))throw new RuntimeException('File assente o scaduto: caricarlo nuovamente.');
+   if(!hash_equals($u['sha256'],hash_file('sha256',$u['path']))||!hash_equals($u['map'],hash_file('sha256',__DIR__.'/mappa_v3.json')))throw new RuntimeException('File o mappa cambiati: ripetere il caricamento.');
+   import_private_dir($cfg['private_dir']);$s=table_source($u['path']);$p=db($cfg);
+   if($action==='preview'){
+    unset($_SESSION['upload']['plan']);$selected=$_POST['tables']??[];
+    if(!is_array($selected))throw new RuntimeException('Selezione non valida.');
+    $order=table_order($selected,$map,table_inventory($s,$map));
+    $p->beginTransaction();
+    try{$report=table_plan($p,$s,$map,$order);$fingerprint=table_fingerprint($p,$map,$order);}finally{$p->rollBack();}
+    $_SESSION['upload']['plan']=['order'=>$order,'report'=>$report,'fingerprint'=>$fingerprint];
+    $_SESSION['upload']['requested']=$selected;
+    $message='Anteprima senza scritture. Le dipendenze sono state incluse automaticamente: '.implode(' → ',$order).'.';
+   }else{
+    $plan=$u['plan']??null;if(!$plan)throw new RuntimeException('Preparare prima l’anteprima.');
+    $order=table_order($plan['order'],$map,table_inventory($s,$map));
+    $report=table_import($p,$s,$map,$order,$plan['report'],$plan['fingerprint']);
+    unset($_SESSION['upload']['plan']);
+    $dir=dirname($u['path']);
+    $logged=@file_put_contents($dir.'/importazioni.jsonl',json_encode(['date'=>gmdate('c'),'mode'=>'selected_tables_update','mapping'=>$map['version'],'source_sha256'=>$u['sha256'],'order'=>$order,'counts'=>$report,'outcome'=>'COMMIT'],JSON_THROW_ON_ERROR)."\n",FILE_APPEND|LOCK_EX)!==false;
+    $message='Importazione completata: nuovi record inseriti, esistenti aggiornati. Nessuna cancellazione.'.($logged?'':' Registro su file non salvato.');
    }
-  }
+   $s=null;
+  }else throw new RuntimeException('Operazione non valida.');
  }
-}catch(Throwable $e){$error=true;$message=$e instanceof PDOException?'Operazione interrotta per errore database (codice '.h($e->getCode()).'). Nessun dato parziale viene confermato durante l’importazione; verificare struttura, permessi e vincoli.':$e->getMessage();}
-$loggedIn=!empty($_SESSION['authenticated'])&&time()-$_SESSION['authenticated']<=1800;
+}catch(Throwable $e){
+ if(isset($p)&&$p->inTransaction())$p->rollBack();
+ $error=true;
+ $message=$e instanceof PDOException?'Operazione bloccata da un vincolo o errore database (SQLSTATE '.$e->getCode().'). Tutte le modifiche di questo import sono annullate. Verificare chiavi univoche e riferimenti.':$e->getMessage();
+}
+page_start('Importazione SQLite','Seleziona le tabelle, verifica l’anteprima e inserisci o aggiorna i dati rispettando i vincoli.',['Servizi','Importazione SQLite']);
+if($message)echo '<aside'.($error?' class="error"':'').'>'.uh($message).'</aside>';
 ?>
-<?php page_start('Importazione SQLite'); ?>
-<p>Mappatura <?=h(mapping()['version'])?> · Importazione nelle tabelle applicative vuote</p>
-<?php if($message):?><aside class="<?=$error?'error':''?>"><?=h($message)?></aside><?php endif;?>
-<?php if(!$loggedIn):?><form method="post"><input type="hidden" name="csrf" value="<?=h($_SESSION['csrf'])?>"><input type="hidden" name="action" value="login"><label>Password amministrativa <input type="password" name="password" required autocomplete="current-password"></label> <button>Accedi</button></form>
-<?php else:?><p>Carica una copia aggiornata del file <strong>.db SQLite</strong>. L’analisi verifica struttura, vincoli e compatibilità. L’importazione mantiene gli ID e si blocca se trova tabelle non vuote.</p><form method="post" enctype="multipart/form-data"><input type="hidden" name="csrf" value="<?=h($_SESSION['csrf'])?>"><input type="hidden" name="action" value="analyse"><input type="file" name="sqlite" accept=".db,.sqlite,.sqlite3" required><button>1. Analizza file</button></form>
-<?php $rows=$report??($_SESSION['upload']['counts']??null);if($rows):?><table><tr><th>Tabella</th><th>Record</th></tr><?php foreach($rows as $t=>$n):?><tr><td><?=h($t)?></td><td><?=h($n)?></td></tr><?php endforeach;?><tr><th>Totale</th><th><?=array_sum($rows)?></th></tr></table><?php endif;?>
-<?php if(isset($_SESSION['upload'])):?><form method="post"><input type="hidden" name="csrf" value="<?=h($_SESSION['csrf'])?>"><input type="hidden" name="action" value="import"><button>2. Importa i dati verificati</button></form><?php endif;?><form method="post"><input type="hidden" name="csrf" value="<?=h($_SESSION['csrf'])?>"><input type="hidden" name="action" value="logout"><button>Esci ed elimina il file temporaneo</button></form><?php endif;?></main></body></html>
+<p>Mappatura <?=uh($map['version'])?>. Eseguire un backup e sospendere le altre modifiche ai dati prima di importare. Gli utenti e i permessi del sito restano invariati.</p>
+<form method="post" enctype="multipart/form-data">
+<input type="hidden" name="csrf" value="<?=uh(csrf())?>"><input type="hidden" name="action" value="upload">
+<label>Copia SQLite aggiornata<input type="file" name="sqlite" accept=".db,.sqlite,.sqlite3" required></label>
+<button>1. Leggi file e mostra tabelle</button>
+</form>
+<?php $upload=$_SESSION['upload']??null;if(isset($upload['inventory'])): ?>
+<form method="post"><input type="hidden" name="csrf" value="<?=uh(csrf())?>"><input type="hidden" name="action" value="preview">
+<table><tr><th>Importa</th><th>Tabella sorgente</th><th>Righe</th><th>Disponibilità</th></tr>
+<?php foreach($upload['inventory'] as $t=>$entry): ?>
+<tr><td><input type="checkbox" name="tables[]" value="<?=uh($t)?>" aria-label="Importa <?=uh($t)?>" <?=$entry['enabled']?'':'disabled'?> <?=in_array($t,$upload['requested']??[],true)?'checked':''?>></td><td><?=uh($t)?></td><td><?=(int)$entry['count']?></td><td><?=uh($entry['reason']?:'Inserimento e aggiornamento')?></td></tr>
+<?php endforeach;?></table>
+<p>Vengono aggiunte automaticamente le tabelle necessarie per i riferimenti, nell’ordine corretto. Le tabelle non mappate restano escluse; una dipendenza assente o incompatibile blocca la selezione.</p>
+<button>2. Prepara anteprima delle tabelle selezionate</button></form>
+<?php $rows=$report??($upload['plan']['report']??null);if($rows): ?>
+<table><tr><th>Ordine / tabella</th><th>Nuovi</th><th>Aggiornati</th><th>Invariati</th></tr>
+<?php foreach($rows as $t=>$counts):?><tr><td><?=uh($t)?></td><td><?=(int)$counts['nuovi']?></td><td><?=(int)$counts['aggiornati']?></td><td><?=(int)$counts['invariati']?></td></tr><?php endforeach;?></table>
+<?php endif;if(isset($upload['plan'])): ?>
+<form method="post"><input type="hidden" name="csrf" value="<?=uh(csrf())?>"><input type="hidden" name="action" value="import">
+<p>Confermando verranno sovrascritti i valori dei record con la stessa chiave nelle tabelle elencate, comprese le dipendenze aggiunte.</p><button>3. Conferma inserimenti e aggiornamenti</button></form>
+<?php endif; ?>
+<form method="post"><input type="hidden" name="csrf" value="<?=uh(csrf())?>"><input type="hidden" name="action" value="remove"><button>Elimina file temporaneo</button></form>
+<?php endif; ?></main></body></html>

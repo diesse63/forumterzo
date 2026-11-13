@@ -29,6 +29,7 @@ jobs:
           POIMANAGER_TEST: '1'
         run: |
           php tests/utenti.php
+          php tests/import_tabelle.php
           php tests/ghost.php
       - name: Compatibilità cifratura e HTTPS senza Sodium e cURL
         run: |

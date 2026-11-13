@@ -57,7 +57,7 @@ function source(string $file,array $map): PDO {
  foreach($map['tables'] as $t=>$spec) if(normSql($actual[$t])!==normSql($spec['source_sql'])) throw new RuntimeException('Struttura SQLite cambiata: '.$t.'. Aggiornare la procedura.');
  return $s;
 }
-function inspectTarget(PDO $p,array $map): void {
+function inspectTarget(PDO $p,array $map,bool $requireEmpty=true): void {
  foreach($map['tables'] as $t=>$spec) {
   $tr=$p->prepare('SELECT COUNT(*) FROM information_schema.TRIGGERS WHERE TRIGGER_SCHEMA=DATABASE() AND EVENT_OBJECT_TABLE=?');$tr->execute([$t]);
   if((int)$tr->fetchColumn()>0)throw new RuntimeException('Trigger inattesi nella destinazione: '.$t);
@@ -82,7 +82,7 @@ function inspectTarget(PDO $p,array $map): void {
   foreach($st as $r){if($r['ENFORCED']!=='YES')throw new RuntimeException('CHECK non applicato: '.$t);$checks[$r['CONSTRAINT_NAME']]=canonicalCheck($r['CHECK_CLAUSE']);}
   $e=array_map('canonicalCheck',$spec['checks']);ksort($e);ksort($checks);
   if($checks!==$e)throw new RuntimeException('CHECK assenti o diversi: '.$t.'. Applicare solo i CHECK mancanti o aggiornare la mappa.');
-  if((int)$p->query('SELECT COUNT(*) FROM '.qi($t))->fetchColumn()!==0)throw new RuntimeException('Importazione bloccata: tabella non vuota '.$t.'. Nessuna sovrascrittura automatica.');
+  if($requireEmpty && (int)$p->query('SELECT COUNT(*) FROM '.qi($t))->fetchColumn()!==0)throw new RuntimeException('Importazione bloccata: tabella non vuota '.$t.'. Nessuna sovrascrittura automatica.');
  }
 }
 function scan(PDO $s,array $map): array {

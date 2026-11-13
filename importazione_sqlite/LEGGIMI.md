@@ -1,3 +1,7 @@
+# Procedura attiva: importazione per tabella con aggiornamento
+
+Leggere IMPORTAZIONE_PER_TABELLA.md. La pagina usa mappa_v3.json: consente tabelle già popolate, aggiornamenti per chiave, inserimenti e dipendenze ordinate. Nessuna cancellazione automatica. Le istruzioni seguenti relative a importazione globale e tabelle obbligatoriamente vuote sono storiche e superate per il flusso attivo.
+
 # Aggiornamento utenti v2
 
 Leggere prima `utenti/LEGGIMI.md`: accesso comune da `/login.php`, importazione riservata a admin/ghost, mappa attiva `mappa_v2.json`. I vecchi utenti SQLite sono ignorati e non rientrano più nei conteggi. La vecchia tabella destinazione va migrata prima dell'attivazione del modulo. Le indicazioni storiche sotto sul login separato e sulla copia delle password Utenti sono superate.

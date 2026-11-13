@@ -12,7 +12,7 @@ function layout_start(string $title, string $description='', array $context=[]):
   '/cambia_password.php'=>['Cambia password','Modifica la password personale mantenendo la cifratura dei tuoi dati.',['Servizi','Cambia password']],
   '/logout.php'=>['Uscita','Conferma la chiusura della sessione di lavoro.',['Sessione','Esci']],
   '/installa_utenti.php'=>['Installazione utenti','Inizializza gli account e la chiave di cifratura per il primo utilizzo.',['Servizi','Installazione utenti']],
-  '/importazione_sqlite/index.php'=>['Importazione SQLite','Analizza e importa i dati dal file SQLite; gli utenti precedenti vengono ignorati.',['Servizi','Importazione SQLite']],
+  '/importazione_sqlite/index.php'=>['Importazione SQLite','Seleziona le tabelle SQLite e inserisci o aggiorna i record rispettando i vincoli.',['Servizi','Importazione SQLite']],
  ];
  $path=parse_url($_SERVER['SCRIPT_NAME']??'',PHP_URL_PATH);
  $meta=$pages[$path]??[$title,$description,$context];
