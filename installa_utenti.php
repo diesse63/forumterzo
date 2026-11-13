@@ -1,6 +1,7 @@
 <?php
 declare(strict_types=1);
 require_once __DIR__.'/includes/auth.php';
+require_once __DIR__.'/includes/protezione_http.php';
 $message='';
 try {
  if(is_file(__DIR__.'/private/security.php'))throw new RuntimeException('Installazione già completata. Usare Gestione utenti.');
@@ -8,16 +9,15 @@ try {
   check_csrf();$cfg=poimanager_config();
   if(strlen($cfg['admin_password'])<16||str_contains($cfg['admin_password'],'CAMBIARE')||!hash_equals($cfg['admin_password'],(string)($_POST['setup_password']??'')))throw new RuntimeException('Password di installazione non valida.');
   password_policy((string)($_POST['admin_password']??''));password_policy((string)($_POST['user_password']??''));
-  if(!extension_loaded('sodium')||!extension_loaded('curl'))throw new RuntimeException('Occorrono PHP Sodium e cURL.');
+  $cipher=profile_choose_cipher();
+  protection_transport();
   // Verifica che Apache neghi l'accesso prima di scrivere la chiave.
   if(trim((string)file_get_contents(__DIR__.'/private/.htaccess'))!=='Require all denied')throw new RuntimeException('Ripristinare private/.htaccess.');
   $name='prova_'.bin2hex(random_bytes(16)).'.txt';$probe=__DIR__.'/private/'.$name;
   if(file_put_contents($probe,'Verifica non riservata')===false)throw new RuntimeException('Cartella private non scrivibile.');
   try{
-   $c=curl_init('https://poimanager.altervista.org/private/'.$name);
-   curl_setopt_array($c,[CURLOPT_RETURNTRANSFER=>true,CURLOPT_FOLLOWLOCATION=>false,CURLOPT_CONNECTTIMEOUT=>5,CURLOPT_TIMEOUT=>10,CURLOPT_SSL_VERIFYPEER=>true,CURLOPT_SSL_VERIFYHOST=>2,CURLOPT_PROXY=>'']);
-   $body=curl_exec($c);$status=(int)curl_getinfo($c,CURLINFO_HTTP_CODE);curl_close($c);
-   if($body===false||$status!==403)throw new RuntimeException('Protezione private non verificata: occorre HTTP 403.');
+   $status=protection_http_status('https://poimanager.altervista.org/private/'.$name);
+   if($status!==403)throw new RuntimeException('Protezione private non verificata: occorre HTTP 403.');
   }finally{@unlink($probe);}
   $db=poimanager_db();$q=$db->query("SELECT GET_LOCK('poimanager_setup_utenti',0)");
   if((int)$q->fetchColumn()!==1)throw new RuntimeException('Installazione già in corso.');
@@ -25,7 +25,7 @@ try {
   try{
    if(is_file($file)||(int)$db->query('SELECT COUNT(*) FROM Utenti')->fetchColumn()!==0)throw new RuntimeException('Utenti già configurati. Installazione bloccata.');
    $dev=isset($_POST['development']);
-   $secret=['key'=>base64_encode(random_bytes(32)),'development'=>$dev,'ghost_enabled'=>$dev,'ghost_hash'=>password_hash((string)($_POST['ghost_password']??''),PASSWORD_DEFAULT)];
+   $secret=['cipher'=>$cipher,'key'=>base64_encode(random_bytes(32)),'development'=>$dev,'ghost_enabled'=>$dev,'ghost_hash'=>password_hash((string)($_POST['ghost_password']??''),PASSWORD_DEFAULT)];
    if($dev&&($_POST['ghost_password']??'')==='')throw new RuntimeException('Indicare la password ghost per lo sviluppo.');
    $handle=fopen($file,'x');
    if(!$handle)throw new RuntimeException('Impossibile creare security.php.');
@@ -47,6 +47,8 @@ try {
  }
 }catch(Throwable $e){$message=$e instanceof PDOException?'Verificare di avere eseguito utenti/migrazione_v2.sql e che le nuove tabelle siano vuote.':$e->getMessage();}
 page_start('Installazione utenti');
+try { echo '<aside>Compatibilità: cifratura '.uh(profile_choose_cipher()).' · verifica HTTPS '.uh(protection_transport()).'.</aside>'; }
+catch (RuntimeException $dependencyError) { echo '<aside>'.uh($dependencyError->getMessage()).'</aside>'; }
 if($message)echo '<aside>'.uh($message).'</aside>';
 if(!is_file(__DIR__.'/private/security.php')): ?>
 <p>Prima eseguire la migrazione SQL in manutenzione. Gli utenti precedenti restano separati e non vengono importati.</p>

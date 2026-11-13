@@ -1,3 +1,13 @@
+## Compatibilità hosting — aggiornamento
+
+L'installazione non richiede più necessariamente Sodium e cURL insieme. Se Sodium manca, seleziona OpenSSL AES-256-GCM con IV casuale di 12 byte e tag di 16 byte; registra il motore nel nuovo security.php. Se cURL manca, verifica la protezione via stream TLS/HTTPS con certificato e nome server verificati. Restano obbligatori esito HTTP 403 e accesso HTTPS all'origine fissa del sito: nessun salto dei controlli. La pagina di installazione mostra separatamente cifratura e trasporto disponibili. Se nessun motore è disponibile, indica cosa abilitare.
+
+Profili Sodium esistenti conservano il loro formato e richiedono Sodium per la lettura; non rigenerare chiavi né security.php per cambiare motore. Per installazioni nuove il motore viene scelto automaticamente. Nessuna modifica SQL necessaria per questo aggiornamento.
+
+Per riprovare: git pull, sincronizzare includes, installa_utenti.php e importazione_sqlite/deposito.php con WinSCP, quindi ricaricare installa_utenti.php. Se la migrazione SQL è già stata eseguita, non ripeterla. Conservare private/config.php e l'eventuale security.php.
+
+Le indicazioni successive che richiedono obbligatoriamente Sodium/cURL sono superate da questa nota.
+
 # POImanager: connessione e distribuzione
 
 Repository: https://github.com/diesse63/forumterzo

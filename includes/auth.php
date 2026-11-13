@@ -1,6 +1,7 @@
 <?php
 declare(strict_types=1);
 require_once __DIR__.'/database.php';
+require_once __DIR__.'/crypto.php';
 ini_set('display_errors','0');
 if (session_status() !== PHP_SESSION_ACTIVE) {
  session_name('poimanager');
@@ -24,16 +25,10 @@ function security(): array {
 function user_key(): string {return base64_decode(security()['key'],true);}
 function user_index(string $name): string {return hash_hmac('sha256',strtolower(trim($name)),user_key());}
 function user_encrypt(array $profile): string {
- if(!extension_loaded('sodium'))throw new RuntimeException('Occorre PHP Sodium.');
- $nonce=random_bytes(SODIUM_CRYPTO_SECRETBOX_NONCEBYTES);
- return base64_encode($nonce.sodium_crypto_secretbox(json_encode($profile,JSON_THROW_ON_ERROR),$nonce,user_key()));
+ return profile_encrypt($profile,user_key(),security()['cipher']??'sodium');
 }
 function user_decrypt(string $cipher): array {
- $v=base64_decode($cipher,true);
- if($v===false||strlen($v)<40)throw new RuntimeException('Profilo cifrato non valido.');
- $p=sodium_crypto_secretbox_open(substr($v,24),substr($v,0,24),user_key());
- if($p===false)throw new RuntimeException('Chiave o profilo non valido.');
- return json_decode($p,true,512,JSON_THROW_ON_ERROR);
+ return profile_decrypt($cipher,user_key());
 }
 function password_policy(string $p): void {
  if(strlen($p)>72 || preg_match('/^.{7,}$/us',$p)!==1 || preg_match('/[^\p{L}\p{N}\s]/u',$p)!==1)
