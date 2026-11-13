@@ -1,0 +1,30 @@
+name: Verifica PHP e utenti
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  verifica:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: test_only_password
+          MYSQL_DATABASE: poimanager_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -ptest_only_password"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Sintassi PHP
+        run: find . -name '*.php' -not -path './private/config.php' -print0 | xargs -0 -n1 php -l
+      - name: Test utenti e importazione su database effimero
+        env:
+          POIMANAGER_TEST: '1'
+        run: php tests/utenti.php

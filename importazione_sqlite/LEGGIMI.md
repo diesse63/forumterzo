@@ -1,3 +1,7 @@
+# Aggiornamento utenti v2
+
+Leggere prima `utenti/LEGGIMI.md`: accesso comune da `/login.php`, importazione riservata a admin/ghost, mappa attiva `mappa_v2.json`. I vecchi utenti SQLite sono ignorati e non rientrano più nei conteggi. La vecchia tabella destinazione va migrata prima dell'attivazione del modulo. Le indicazioni storiche sotto sul login separato e sulla copia delle password Utenti sono superate.
+
 # Importazione SQLite → MySQL AlterVista — versione 1.0.0
 
 Questa procedura legge direttamente un file SQLite aggiornato: i dati non sono inclusi in nessun file SQL del pacchetto. Il file di esempio dell'utente contiene 16 tabelle e 2.730 record; i conteggi vengono ricalcolati ad ogni caricamento e non sono fissi.

@@ -6,3 +6,5 @@
 /importazione_sqlite/data/*
 !/importazione_sqlite/data/.htaccess
 !/importazione_sqlite/data/index.php
+
+/private/security.php

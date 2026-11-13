@@ -2,7 +2,7 @@
 declare(strict_types=1);
 require_once dirname(__DIR__).'/includes/database.php';
 function qi(string $s): string { return '`'.str_replace('`','``',$s).'`'; }
-function mapping(): array { return json_decode(file_get_contents(__DIR__.'/mappa_v1.json'),true,512,JSON_THROW_ON_ERROR); }
+function mapping(): array { return json_decode(file_get_contents(__DIR__.'/mappa_v2.json'),true,512,JSON_THROW_ON_ERROR); }
 function db(array $cfg): PDO {
  if (!in_array('mysql',PDO::getAvailableDrivers(),true) || !in_array('sqlite',PDO::getAvailableDrivers(),true)) throw new RuntimeException('Occorrono le estensioni PDO MySQL e PDO SQLite.');
  $p=poimanager_db();
@@ -34,8 +34,11 @@ function source(string $file,array $map): PDO {
  if ($head!=="SQLite format 3\0") throw new RuntimeException('Il file non è SQLite.');
  $s=new PDO('sqlite:'.$file,null,null,[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION]); $s->exec('PRAGMA query_only=ON');
  if ($s->query('PRAGMA integrity_check')->fetchAll(PDO::FETCH_COLUMN)!==['ok']) throw new RuntimeException('SQLite non integro.');
- if ($s->query('PRAGMA foreign_key_check')->fetch()) throw new RuntimeException('Vincoli SQLite violati.');
+ foreach ($s->query('PRAGMA foreign_key_check') as $violation) {
+  if (!in_array($violation['table'] ?? $violation[0], $map['ignored_source_tables'] ?? [], true)) throw new RuntimeException('Vincoli SQLite violati.');
+ }
  $actual=$s->query("SELECT name,sql FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'")->fetchAll(PDO::FETCH_KEY_PAIR);
+ foreach ($map['ignored_source_tables'] ?? [] as $ignored) unset($actual[$ignored]);
  $names=array_keys($actual); $expected=array_keys($map['tables']);sort($names);sort($expected);
  if ($names!==$expected) throw new RuntimeException('Tabelle SQLite diverse dalla versione supportata. Aggiornare la mappatura.');
  foreach($map['tables'] as $t=>$spec) if(normSql($actual[$t])!==normSql($spec['source_sql'])) throw new RuntimeException('Struttura SQLite cambiata: '.$t.'. Aggiornare la procedura.');
