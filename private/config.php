@@ -11,6 +11,6 @@ return [
     'password' => '6syjMAYwaQ8R',
     'admin_password' => 'Asdfghjkl.123456',
     // Deposito SQLite e log: directory esistente fuori dalla radice web.
-    'private_dir' => '/PERCORSO_NON_PUBBLICO/importazioni_private',
+    'private_dir' => dirname(__DIR__) . '/importazione_sqlite/data',
     'max_bytes' => 20 * 1024 * 1024,
 ];
