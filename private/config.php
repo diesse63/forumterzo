@@ -9,7 +9,7 @@ return [
     'dsn' => 'mysql:host=localhost;dbname=my_poimanager;charset=utf8mb4',
     'user' => 'poimanager',
     'password' => '6syjMAYwaQ8R',
-    'admin_password' => 'CAMBIARE_PASSWORD_IMPORTAZIONE',
+    'admin_password' => 'Asdfghjkl.123456',
     // Deposito SQLite e log: directory esistente fuori dalla radice web.
     'private_dir' => '/PERCORSO_NON_PUBBLICO/importazioni_private',
     'max_bytes' => 20 * 1024 * 1024,
