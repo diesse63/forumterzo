@@ -46,7 +46,7 @@ const path=require('path');
   check((await pw.locator('..').textContent()).includes('(Minimo 7 caratteri e uno speciale)'),'Requisito password nel label');
   for(const value of ['admin','esternobase','esternoevoluto']){
    await role.selectOption(value);
-   check(!await permissions.isVisible()&&await permissions.isDisabled(),'Permessi nascosti e disabilitati');
+   check(!await permissions.isVisible()&&await permissions.evaluate(field=>field.disabled),'Permessi nascosti e disabilitati');
    check(await page.locator('select[name="permessi[associazioni]"]').inputValue()==='nessuno','Permessi azzerati');
    check(await page.locator('form').evaluate(form=>![...new FormData(form).keys()].some(k=>k.startsWith('permessi['))),'Permessi esclusi dal POST');
    await role.selectOption('user');
