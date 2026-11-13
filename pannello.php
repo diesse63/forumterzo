@@ -6,7 +6,7 @@ try{
  page_start('Pannello POImanager');
  echo '<p>Utente: '.uh($u['Profilo']['nome']).' · Ruolo: '.uh($u['Ruolo']).'</p>';
  if($u['Ruolo']==='ghost')echo '<aside>Modalità sviluppo: accesso completo ghost attivo. Disabilitare prima della produzione.</aside>';
- $routes=['utenti'=>'/utenti.php','importazione'=>'/importazione_sqlite/index.php'];
+ $routes=['associazioni'=>'/anagrafica.php','utenti'=>'/utenti.php','importazione'=>'/importazione_sqlite/index.php'];
  echo '<ul>';
  foreach(poimanager_db()->query('SELECT * FROM Pannelli ORDER BY Titolo') as $p){
   if(!allowed($u,$p['Codice']))continue;

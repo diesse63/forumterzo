@@ -25,6 +25,7 @@ function layout_start(string $title, string $description='', array $context=[]):
  $items=[];
  if($user){
   $items[]=['label'=>'Pannello','url'=>'/pannello.php'];
+  if(allowed($user,'associazioni'))$items[]=['label'=>'Anagrafiche','children'=>[['label'=>'Enti','url'=>'/anagrafica.php']]];
   $services=[];
   if(allowed($user,'utenti','scrittura'))$services[]=['label'=>'Utenti','url'=>'/utenti.php'];
   if(allowed($user,'importazione','scrittura'))$services[]=['label'=>'Importazione SQLite','url'=>'/importazione_sqlite/index.php'];
