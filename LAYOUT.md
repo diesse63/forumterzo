@@ -15,6 +15,8 @@ Su mobile il menu va a capo mantenendo le dimensioni prescritte.
 
 ## Componente unico
 
+La pagina `index.php` nella radice del sito reindirizza alla schermata di accesso; gli utenti già autenticati vengono quindi inoltrati al pannello da `login.php`.
+
 Le pagine includono includes/auth.php, verificano i permessi e chiamano page_start(). La funzione usa includes/layout.php, assets/layout.css e assets/menu.js. Non creare intestazioni, CSS o menu duplicati.
 Il registro in layout.php definisce titolo, descrizione e percorso delle pagine esistenti. Per nuove pagine passare descrizione e contesto oppure aggiungerle al registro:
 
