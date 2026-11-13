@@ -64,4 +64,4 @@ echo '</table>'; ?>
 <table><tr><th>Schermata</th><th>Accesso</th></tr>
 <?php foreach($panels as $p):if(in_array($p['Codice'],['utenti','importazione'],true))continue; ?>
 <tr><td><?=uh($p['Titolo'])?></td><td><select name="permessi[<?=uh($p['Codice'])?>]"><?php foreach(['nessuno'=>'Nessuno','lettura'=>'Sola lettura','scrittura'=>'Lettura e scrittura'] as $v=>$label)echo '<option value="'.$v.'" '.(($perms[$p['Codice']]??'nessuno')===$v?'selected':'').'>'.uh($label).'</option>'; ?></select></td></tr>
-<?php endforeach; ?></table><button>Salva utente e permessi</button></form></main></html>
+<?php endforeach; ?></table><button>Salva utente e permessi</button></form></main></body></html>

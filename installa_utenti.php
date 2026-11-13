@@ -59,4 +59,4 @@ if(!is_file(__DIR__.'/private/security.php')): ?>
 <label>Password ghost, solo sviluppo<input type="password" name="ghost_password" autocomplete="new-password"></label>
 <button>Inizializza utenti e chiave di cifratura</button>
 </form>
-<?php endif; echo '</main></html>';
+<?php endif; echo '</main></body></html>';

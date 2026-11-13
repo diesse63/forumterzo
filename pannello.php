@@ -15,5 +15,5 @@ try{
   else echo uh($p['Titolo']).' — schermata applicativa da collegare';
   echo allowed($u,$p['Codice'],'scrittura')?' (lettura e scrittura)':' (sola lettura)';
   echo '</li>';
- }echo '</ul></main></html>';
+ }echo '</ul></main></body></html>';
 }catch(Throwable $e){http_response_code(503);echo 'Pannello temporaneamente non disponibile. Verificare installazione utenti.';}

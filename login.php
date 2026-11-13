@@ -17,4 +17,4 @@ if($error)echo '<aside>'.uh($error).'</aside>';
 <label>Nome utente<input name="nome" required maxlength="100" autocomplete="username"></label>
 <label>Password<input type="password" name="password" required autocomplete="current-password"></label>
 <button>Accedi</button>
-</form></main></html>
+</form></main></body></html>

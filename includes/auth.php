@@ -92,6 +92,7 @@ function user_login(string $name,string $password): void {
  $q=$db->prepare('DELETE FROM AccessiTentativi WHERE Chiave=?');$q->execute([$rate]);
  session_regenerate_id(true);$_SESSION=['account'=>$account+['time'=>time()],'csrf'=>bin2hex(random_bytes(32))];
 }
-function page_start(string $title): void {
- echo '<!doctype html><html lang="it"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'.uh($title).'</title><style>body{font:16px system-ui;margin:30px auto;max-width:1050px;padding:16px;background:#f2f5f9;color:#193047}main{background:white;padding:24px;border-radius:12px}input,select,button{font:inherit;padding:9px;margin:5px}label{display:block;margin:10px 0}table{width:100%;border-collapse:collapse}td,th{padding:10px;text-align:left;border-bottom:1px solid #ddd}a{color:#125d91}aside{padding:14px;background:#e5effb}nav{margin-bottom:20px}button{cursor:pointer}</style><main><nav><a href="/pannello.php">Pannello</a> · <a href="/cambia_password.php">Password</a> · <a href="/logout.php">Esci</a></nav><h1>'.uh($title).'</h1>';
+require_once __DIR__.'/layout.php';
+function page_start(string $title, string $description='', array $context=[]): void {
+ layout_start($title,$description,$context);
 }

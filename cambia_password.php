@@ -21,4 +21,4 @@ page_start('Cambia password');if(!empty($msg))echo '<aside>'.uh($msg).'</aside>'
 <label>Nuova password<input name="nuova" type="password" minlength="7" required autocomplete="new-password"></label>
 <label>Conferma<input name="conferma" type="password" required autocomplete="new-password"></label>
 <p>Almeno 7 caratteri e uno speciale. Nome ed email resteranno leggibili: il cambio password non modifica la chiave di cifratura.</p>
-<button>Salva password</button></form></main></html>
+<button>Salva password</button></form></main></body></html>

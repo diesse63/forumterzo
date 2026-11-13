@@ -6,4 +6,4 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
  $_SESSION=[];session_destroy();header('Location: /login.php');exit;
 }
 page_start('Uscita');
-echo '<form method="post"><input type="hidden" name="csrf" value="'.uh(csrf()).'"><button>Conferma uscita</button></form></main></html>';
+echo '<form method="post"><input type="hidden" name="csrf" value="'.uh(csrf()).'"><button>Conferma uscita</button></form></main></body></html>';
