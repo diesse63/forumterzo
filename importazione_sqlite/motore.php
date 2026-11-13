@@ -12,6 +12,9 @@ function db(array $cfg): PDO {
 }
 function normSql(string $s): string { return preg_replace('/\s+/','',trim($s)); }
 function canonicalCheck(string $s): string {
+ // MySQL 8 puo esporre i delimitatori testuali come apici preceduti da backslash.
+ $s=str_replace("\\'", "'", $s);
+
  $s=preg_replace("/_[a-zA-Z0-9]+(?=\s*')/",'', $s);
  $s=preg_replace_callback("/'(?:''|[^'])*'/",fn($m)=>'literal'.hash('sha256',$m[0]),$s);
  $s=strtolower($s);

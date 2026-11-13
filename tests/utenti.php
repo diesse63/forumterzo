@@ -59,14 +59,7 @@ $s->exec('CREATE TABLE Utenti (ID INTEGER PRIMARY KEY, Nome TEXT, Email TEXT, Pa
 $s->exec("INSERT INTO Utenti VALUES (1,'cipher','cipher','cipher',1)");$s=null;
 $src=source($path,$map);$counts=scan($src,$map);ensure(!isset($counts['Utenti']),'Legacy conteggiato');
 $before=$db->query('SELECT * FROM Utenti ORDER BY ID')->fetchAll();
-try { inspectTarget($db,$map); } catch (RuntimeException $e) {
- foreach($db->query("SELECT tc.CONSTRAINT_NAME,cc.CHECK_CLAUSE FROM information_schema.TABLE_CONSTRAINTS tc JOIN information_schema.CHECK_CONSTRAINTS cc ON cc.CONSTRAINT_SCHEMA=tc.CONSTRAINT_SCHEMA AND cc.CONSTRAINT_NAME=tc.CONSTRAINT_NAME WHERE tc.TABLE_SCHEMA=DATABASE() AND tc.TABLE_NAME='Mail'") as $r) {
-  fwrite(STDERR,json_encode([$r['CONSTRAINT_NAME'],$r['CHECK_CLAUSE'],canonicalCheck($r['CHECK_CLAUSE'])])."\n");
- }
- fwrite(STDERR,json_encode(array_map('canonicalCheck',$map['tables']['Mail']['checks']))."\n");
- throw $e;
-}
-importData($db,$src,$map,$counts);
+inspectTarget($db,$map);importData($db,$src,$map,$counts);
 ensure($before===$db->query('SELECT * FROM Utenti ORDER BY ID')->fetchAll(),'Importazione modifica nuovi utenti');
 ensure((int)$db->query('SELECT COUNT(*) FROM UtentiPermessi')->fetchColumn()===3,'Permessi persi');
 $src=null;unlink($path);
