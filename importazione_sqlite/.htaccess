@@ -1,0 +1,4 @@
+Options -Indexes
+<FilesMatch "^(config.*\.php|motore\.php|mappa.*\.json|.*\.sql|.*\.md|.*\.txt)$">
+Require all denied
+</FilesMatch>

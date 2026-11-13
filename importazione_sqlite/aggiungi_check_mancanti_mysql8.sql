@@ -1,0 +1,8 @@
+-- SOLO sulle tabelle vuote della prima importazione, prive dei CHECK. MySQL >=8.0.16.
+ALTER TABLE `Mail` ADD CONSTRAINT `ck_Mail_1` CHECK (BINARY `TipoSoggetto` IN ('ASSOCIAZIONE','REFERENTE','ALTRO')) ENFORCED;
+ALTER TABLE `Mail` ADD CONSTRAINT `ck_Mail_2` CHECK (`PEC` IN (0,1)) ENFORCED;
+ALTER TABLE `Mail` ADD CONSTRAINT `ck_Mail_3` CHECK (`Predefinito` IN (0,1)) ENFORCED;
+ALTER TABLE `Telefono` ADD CONSTRAINT `ck_Telefono_1` CHECK (BINARY `TipoSoggetto` IN ('ASSOCIAZIONE','REFERENTE','ALTRO')) ENFORCED;
+ALTER TABLE `Associazioni` ADD CONSTRAINT `ck_Associazioni_1` CHECK (`TAVOLO` IN (0, 1)) ENFORCED;
+ALTER TABLE `Associazioni` ADD CONSTRAINT `ck_Associazioni_2` CHECK (`DIRETTIVO_DELEGAZIONE` IN (0, 1)) ENFORCED;
+ALTER TABLE `Soggetti` ADD CONSTRAINT `ck_Soggetti_1` CHECK (BINARY `Tipo` IN ('LR','AS')) ENFORCED;

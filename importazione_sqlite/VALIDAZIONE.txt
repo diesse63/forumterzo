@@ -1,0 +1,12 @@
+Verifiche eseguite il 13/11/2026
+- PHP 8.4.27: sintassi valida di index.php, motore.php e config.esempio.php.
+- Motore PHP con PDO SQLite: apertura in sola lettura del file fornito, integrity_check e foreign_key_check, controllo struttura sorgente e scansione di tutte le 16 tabelle / 2730 righe.
+- Trasformazioni numeriche e capienza dei campi VARBINARY verificate sui valori forniti.
+- Calcolo digest PHP delle righe di tutte le tabelle verificato.
+- Normalizzazione CHECK verificata rispetto alla forma CAST(... AS CHAR CHARSET binary) esposta da MySQL; distinzione di maiuscole e spazi nei valori letterali verificata.
+- Conversione di numeri non validi e frazionari rifiutata.
+- Contratto di struttura sorgente alterato rifiutato.
+- 65 colonne della mappa confrontate con la struttura SQLite.
+- Entrambi i file SQL controllati: nessuna istruzione INSERT, REPLACE, DELETE o TRUNCATE di dati.
+
+Non verificati: connessione MySQL reale, importazione MySQL completa, rollback MySQL e concorrenza, UI sul server, permessi e driver AlterVista. Questi controlli richiedono un ambiente di prova MySQL 8.0.16+ e la configurazione dell'hosting.
