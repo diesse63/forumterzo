@@ -80,8 +80,8 @@ function inspectTarget(PDO $p,array $map,bool $requireEmpty=true): void {
   if($f!==$e)throw new RuntimeException('Chiavi esterne diverse: '.$t);
   $st=$p->prepare("SELECT tc.CONSTRAINT_NAME,cc.CHECK_CLAUSE,tc.ENFORCED FROM information_schema.TABLE_CONSTRAINTS tc JOIN information_schema.CHECK_CONSTRAINTS cc ON cc.CONSTRAINT_SCHEMA=tc.CONSTRAINT_SCHEMA AND cc.CONSTRAINT_NAME=tc.CONSTRAINT_NAME WHERE tc.TABLE_SCHEMA=DATABASE() AND tc.TABLE_NAME=? AND tc.CONSTRAINT_TYPE='CHECK'");$st->execute([$t]);$checks=[];
   foreach($st as $r){if($r['ENFORCED']!=='YES')throw new RuntimeException('CHECK non applicato: '.$t);$checks[$r['CONSTRAINT_NAME']]=canonicalCheck($r['CHECK_CLAUSE']);}
-  $e=array_map('canonicalCheck',$spec['checks']);ksort($e);ksort($checks);
-  if($checks!==$e)throw new RuntimeException('CHECK assenti o diversi: '.$t.'. Applicare solo i CHECK mancanti o aggiornare la mappa.');
+  $e=array_values(array_map('canonicalCheck',$spec['checks']));$actualChecks=array_values($checks);sort($e);sort($actualChecks);
+  if($actualChecks!==$e)throw new RuntimeException('CHECK assenti o diversi: '.$t.'. Aprire Verifica CHECK dalla pagina di importazione per confrontarli e aggiungere soltanto quelli mancanti.');
   if($requireEmpty && (int)$p->query('SELECT COUNT(*) FROM '.qi($t))->fetchColumn()!==0)throw new RuntimeException('Importazione bloccata: tabella non vuota '.$t.'. Nessuna sovrascrittura automatica.');
  }
 }

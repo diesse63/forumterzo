@@ -64,6 +64,7 @@ if(isset($_SESSION['upload']['inventory'])&&is_file($_SESSION['upload']['path']?
 page_start('Importazione SQLite','Seleziona le tabelle, verifica l’anteprima e inserisci o aggiorna i dati rispettando i vincoli.',['Servizi','Importazione SQLite']);
 if($message)echo '<aside'.($error?' class="error"':'').'>'.uh($message).'</aside>';
 ?>
+<p><a href="/verifica_check.php">Verifica CHECK della destinazione MySQL</a></p>
 <p>Mappatura <?=uh($map['version'])?>. Eseguire un backup e sospendere le altre modifiche ai dati prima di importare. Gli utenti e i permessi del sito restano invariati.</p>
 <form method="post" enctype="multipart/form-data">
 <input type="hidden" name="csrf" value="<?=uh(csrf())?>"><input type="hidden" name="action" value="upload">
