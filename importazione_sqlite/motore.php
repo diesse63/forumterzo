@@ -1,10 +1,11 @@
 <?php
 declare(strict_types=1);
+require_once dirname(__DIR__).'/includes/database.php';
 function qi(string $s): string { return '`'.str_replace('`','``',$s).'`'; }
 function mapping(): array { return json_decode(file_get_contents(__DIR__.'/mappa_v1.json'),true,512,JSON_THROW_ON_ERROR); }
 function db(array $cfg): PDO {
  if (!in_array('mysql',PDO::getAvailableDrivers(),true) || !in_array('sqlite',PDO::getAvailableDrivers(),true)) throw new RuntimeException('Occorrono le estensioni PDO MySQL e PDO SQLite.');
- $p=new PDO($cfg['dsn'],$cfg['user'],$cfg['password'],[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION,PDO::ATTR_EMULATE_PREPARES=>false]);
+ $p=poimanager_db();
  $v=$p->query('SELECT VERSION()')->fetchColumn();
  if (stripos($v,'MariaDB')!==false || version_compare($v,'8.0.16','<')) throw new RuntimeException('Questa versione della procedura richiede MySQL >=8.0.16. Server: '.$v);
  $p->exec("SET SESSION sql_mode='STRICT_ALL_TABLES,NO_AUTO_VALUE_ON_ZERO'"); $p->exec('SET FOREIGN_KEY_CHECKS=1'); return $p;

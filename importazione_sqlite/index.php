@@ -3,12 +3,12 @@ declare(strict_types=1);
 ini_set('display_errors','0');
 header('Cache-Control: no-store'); header('X-Content-Type-Options: nosniff');header("Content-Security-Policy: default-src 'self'; style-src 'unsafe-inline'; form-action 'self'; frame-ancestors 'none'");
 session_name('sqlite_import_admin');session_set_cookie_params(['httponly'=>true,'secure'=>(!empty($_SERVER['HTTPS'])&&$_SERVER['HTTPS']!=='off'),'samesite'=>'Strict']);session_start();
+require_once dirname(__DIR__).'/includes/database.php';
 require __DIR__.'/motore.php';
 function h($s):string{return htmlspecialchars((string)$s,ENT_QUOTES|ENT_SUBSTITUTE,'UTF-8');}
 $_SESSION['csrf']??=bin2hex(random_bytes(32));$message='';$report=null;$error=false;
 try{
- if(!is_file(__DIR__.'/config.php'))throw new RuntimeException('Configurazione assente: copiare config.esempio.php in config.php e compilare i parametri.');
- $cfg=require __DIR__.'/config.php';
+ $cfg=poimanager_config();
  if(strlen($cfg['admin_password'])<16||str_contains($cfg['admin_password'],'CAMBIARE'))throw new RuntimeException('Configurare una password amministrativa unica di almeno 16 caratteri.');
  if($_SERVER['REQUEST_METHOD']==='POST'){
   if(!hash_equals($_SESSION['csrf'],$_POST['csrf']??''))throw new RuntimeException('Sessione scaduta: ricaricare la pagina.');
