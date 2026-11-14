@@ -1,3 +1,7 @@
+# Aggiornamento: cifratura dei dati gestionali
+
+Leggere prima CIFRATURA_DATI.md nella radice. È disponibile la migrazione a lotti da /cifratura_dati.php, da eseguire dopo backup e distribuzione completa del codice. La procedura SQLite attiva usa mappa_v4.json e le scritture protette di includes/dati.php. Dopo l'attivazione non usare vecchi file PHP che leggono o scrivono direttamente le colonne riservate. Profili utenti, credenziali Gmail e token conferme restano separati e invariati. Le precedenti indicazioni sotto che descrivono dati gestionali non cifrati o mappa_v3 sono superate da questo aggiornamento.
+
 # Clone anagrafica enti
 
 Pagina anagrafica.php, menu Anagrafiche > Enti. Conserva le funzioni della pagina originale: elenco, filtro tipologia, ricerca per ente/CF/persona, conteggio, 50 record per pagina, incarichi, apertura scheda e nuovo ente con precompilazione RUNTS. Le persone sono lette da Soggetti, con Tipo LR e AS, senza vecchi endpoint Referenti/AltriSoggetti.

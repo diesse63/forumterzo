@@ -20,7 +20,8 @@ function table_inventory(PDO $s,array $map): array {
    $columns=array_column($s->query('PRAGMA table_info('.qi($t).')')->fetchAll(),'name');
    $required=array_unique(array_column($spec['mapping'],'source'));
    $missing=array_diff($required,$columns);
-   if($missing)$reason='Colonne sorgente mancanti: '.implode(', ',$missing);
+   if(array_intersect(['_Cifrato','_CryptoID'],$columns))$reason='Fonte con colonne di cifratura: usare il database SQLite originale, non una copia dei campi HMAC';
+   elseif($missing)$reason='Colonne sorgente mancanti: '.implode(', ',$missing);
   }
   $result[$t]=['present'=>true,'count'=>(int)$s->query('SELECT COUNT(*) FROM '.qi($t))->fetchColumn(),'reason'=>$reason,'enabled'=>$reason===''];
  }

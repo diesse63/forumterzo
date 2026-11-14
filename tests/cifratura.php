@@ -57,6 +57,7 @@ try{
  cr_check(dc_find($p,'Tipologia',['ID'=>1])['Tipologia']==='TIPO AGGIORNATO CIFRATO','Update import cifrato');
  cr_check($p->query('SELECT Tipologia FROM Tipologia WHERE ID=400')->fetchColumn()!=='TIPO NUOVO CIFRATO','Import in chiaro');
  $plan=table_plan($p,$s,$map,$order);cr_check($plan['Tipologia']['invariati']===2,'Reimport cifrato non idempotente');
+ $s->exec('ALTER TABLE Tipologia ADD COLUMN _Cifrato TEXT');$inventory=table_inventory($s,$map);cr_check(!$inventory['Tipologia']['enabled'],'Sorgente già cifrata non bloccata');
 }finally{$s=null;@unlink($path);}
 $blindOriginal=$p->query('SELECT SOGGETTO FROM Associazioni WHERE ID='.$created)->fetchColumn();
 $p->prepare('UPDATE Associazioni SET SOGGETTO=? WHERE ID=?')->execute([str_repeat('0',64),$created]);

@@ -1,3 +1,7 @@
+# Aggiornamento: cifratura dei dati gestionali
+
+Leggere prima CIFRATURA_DATI.md nella radice. È disponibile la migrazione a lotti da /cifratura_dati.php, da eseguire dopo backup e distribuzione completa del codice. La procedura SQLite attiva usa mappa_v4.json e le scritture protette di includes/dati.php. Dopo l'attivazione non usare vecchi file PHP che leggono o scrivono direttamente le colonne riservate. Profili utenti, credenziali Gmail e token conferme restano separati e invariati. Le precedenti indicazioni sotto che descrivono dati gestionali non cifrati o mappa_v3 sono superate da questo aggiornamento.
+
 # Procedura attiva: importazione per tabella con aggiornamento
 
 Leggere IMPORTAZIONE_PER_TABELLA.md. La pagina usa mappa_v3.json: consente tabelle già popolate, aggiornamenti per chiave, inserimenti e dipendenze ordinate. Nessuna cancellazione automatica. Le istruzioni seguenti relative a importazione globale e tabelle obbligatoriamente vuote sono storiche e superate per il flusso attivo.
