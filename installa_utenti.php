@@ -50,6 +50,7 @@ try { echo '<aside>Compatibilità: cifratura '.uh(profile_choose_cipher()).' · 
 catch (RuntimeException $dependencyError) { echo '<aside>'.uh($dependencyError->getMessage()).'</aside>'; }
 if($message)echo '<aside>'.uh($message).'</aside>';
 if(!is_file(__DIR__.'/private/security.php')): ?>
+<p>Se gli utenti erano già installati e la chiave originale è perduta, usare <a href="/recupera_utenti.php">Recupero accessi</a>. Non ripetere la migrazione SQL e non rinominare il file di esempio.</p>
 <p>Prima eseguire la migrazione SQL in manutenzione. Gli utenti precedenti restano separati e non vengono importati.</p>
 <form method="post">
 <input type="hidden" name="csrf" value="<?=uh(csrf())?>">

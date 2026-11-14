@@ -56,3 +56,8 @@ jobs:
         run: |
           php -d disable_functions=sodium_crypto_secretbox,sodium_crypto_secretbox_open tests/cifratura.php
           node tests/cifratura.cjs
+
+      - name: Recupero accessi con chiave perduta su database effimero
+        env:
+          POIMANAGER_TEST: '1'
+        run: php tests/recupero.php

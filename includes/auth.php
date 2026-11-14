@@ -16,7 +16,7 @@ function security(): array {
  static $c=null;
  if($c!==null)return $c;
  $file=dirname(__DIR__).'/private/security.php';
- if(!is_file($file))throw new RuntimeException('Completare prima installa_utenti.php.');
+ if(!is_file($file))throw new RuntimeException('Chiave utenti assente (private/security.php). Prima installazione: installa_utenti.php; utenti già presenti e chiave perduta: recupera_utenti.php. Non rinominare security.esempio.php.');
  if(!defined('POIMANAGER_INTERNAL'))define('POIMANAGER_INTERNAL',true);
  $c=require $file;
  if(!is_array($c)||strlen(base64_decode($c['key']??'',true)?:'')!==32)throw new RuntimeException('Chiave utenti non valida.');

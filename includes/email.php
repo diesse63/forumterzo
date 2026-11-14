@@ -150,6 +150,7 @@ function em_prepare(PDO $p,int $id): int {
  }catch(Throwable $e){if($p->inTransaction())$p->rollBack();throw $e;}
 }
 function em_payload(array $row,array $config): array {
+ if(!isset($row['CodiceHash'])||!hash_equals((string)$row['CodiceHash'],hash('sha256',em_token($row['ID']))))throw new RuntimeException('Invio preparato con una chiave utenti diversa. Ricreare la campagna come nuova bozza; non reinviare gli esiti incerti.');
  $name=$row['Nome'];$link='https://poimanager.altervista.org/email_conferma.php?t='.em_token($row['ID']);
  $html=str_replace('{nome}',em_h($name),$row['HTML']);$text=str_replace('{nome}',$name,$row['Testo']);
  $subject=$row['Oggetto'];if($config['Modalita']==='test'){$subject='[TEST] '.$subject;$text="PROVA per ".$row['Email']."\n\n".$text;$html='<p><strong>PROVA</strong> per '.em_h($row['Email']).'</p>'.$html;}
@@ -170,9 +171,10 @@ function em_send_batch(PDO $p,int $id,?callable $bridge=null): array {
    $dest=dc_find($p,'email_destinatari',['ID'=>$row['DestinatarioID']]);$plainMessage=dc_find($p,'email_messaggi',['ID'=>$id]);
    $row=array_merge($plainMessage,$dest,$row);
    if(time()-$start>150){$notice='Tempo del lotto terminato: riprendere i rimanenti.';break;}
+   $payload=em_payload($row,$config);
    $claim=$p->prepare("UPDATE email_invii SET Stato='in_corso',IniziatoIl=UTC_TIMESTAMP() WHERE ID=? AND Stato='da_inviare'");$claim->execute([$row['ID']]);if(!$claim->rowCount())continue;
    try{
-    $r=$bridge($config,$secret,em_payload($row,$config));
+    $r=$bridge($config,$secret,$payload);
     if(($r['status']??'')==='sent'){
      $update=$p->prepare("UPDATE email_invii SET Stato='inviato',InviatoIl=COALESCE(InviatoIl,UTC_TIMESTAMP()),Nota='' WHERE ID=?");$update->execute([$row['ID']]);$sent++;
     }elseif(($r['status']??'')==='not_sent'){
