@@ -2,9 +2,9 @@
 
 ## Pagine e funzioni
 
-- `dashboard_anagrafica.php`: due schede Enti e Altri soggetti, collegate anche dal menu Anagrafiche. La scheda Altri soggetti è visibile a chi ha accesso sia ad associazioni sia a soggetti.
+- `anagrafica.php`: unico ingresso dal menu Anagrafiche > Anagrafica e dal pannello. Elenco, ricerca, filtri e inserimento enti.
 - `anagrafica_singola.php?id=...`: modifica denominazione, codice fiscale, tipologia e incarichi ETS; CRUD persone LR/AS; email/PEC e telefoni di enti e persone; predefinito unico per titolare; confronto RUNTS e importazione selettiva Cesvot.
-- `gestione_altri.php`: ricerca e paginazione degli altri soggetti con email e ente. I legali rappresentanti (Soggetti.Tipo = LR) restano gestibili nella scheda del relativo ente. Le modifiche si eseguono nella scheda del relativo ente, evitando gestioni separate dello stesso dato. Per creare una persona, scegliere prima l'ente.
+- Le persone di entrambe le tipologie LR e AS si gestiscono nella scheda del relativo ente. Non ci sono più dashboard intermedie o pagine separate per Referenti e Altri soggetti.
 
 Le pagine sono PHP con il layout comune Gestione. Stili e JavaScript sono locali, senza Tailwind, DaisyUI o vecchie API Node. Anche senza JavaScript i moduli funzionano con POST e redirect; con JavaScript i salvataggi indipendenti aggiornano le sezioni senza perdere una bozza nei dati principali. Uscendo con dati principali non salvati, il browser chiede conferma. In caso di errore di connessione verificare l'esito prima di ripetere.
 
@@ -14,7 +14,7 @@ Le pagine sono PHP con il layout comune Gestione. Stili e JavaScript sono locali
 |---|---|
 | dashboard_anagrafica.html, anagrafica_singola.html | Allegati analizzati |
 | anagrafica.html | Presente nello ZIP precedente; già convertito in anagrafica.php |
-| gestione_referenti.html, gestione_altri.html | Presenti in public.zip; gli altri soggetti hanno un archivio PHP, i legali rappresentanti si gestiscono nella scheda ente |
+| gestione_referenti.html, gestione_altri.html | Presenti in public.zip; entrambe le tipologie si gestiscono nella scheda PHP del relativo ente |
 | assets/js/auth.js, assets/js/ui.js, assets/js/config.js | Presenti in public.zip; autenticazione e componenti sostituiti da quelli PHP comuni |
 | DaisyUI e Tailwind CDN | Sostituiti dagli stili locali, compatibili con la CSP attuale |
 | /api/tipologie, /api/associazioni, /api/referenti, /api/altri-soggetti, /api/mail, /api/telefono | Implementazione server originale non fornita. Funzioni ricostruite sulle tabelle attuali con moduli PHP |
@@ -34,7 +34,7 @@ Eliminare una persona rimuove i suoi recapiti e le relative iscrizioni alle list
 
 ## Permessi
 
-Lettura della scheda: pannello associazioni. Gli archivi globali persone richiedono anche soggetti in lettura. Ogni POST controlla il permesso di scrittura sul pannello interessato, oltre all'accesso alla scheda e al CSRF:
+Lettura della scheda: pannello associazioni. Ogni POST controlla il permesso di scrittura sul pannello interessato, oltre all'accesso alla scheda e al CSRF:
 
 | Operazione | Scrittura richiesta |
 |---|---|
@@ -59,10 +59,10 @@ Cesvot: confronto per denominazione esatta ignorando maiuscole e spazi esterni; 
 
 1. Fare il normale backup del database e dei file privati.
 2. `git pull --ff-only` sul PC.
-3. Caricare con WinSCP: anagrafica_singola.php, dashboard_anagrafica.php, gestione_altri.php, pannello.php; includes/layout.php, includes/anagrafica_scheda.php, includes/anagrafica_scheda_sezioni.php, includes/anagrafica_persone.php; assets/anagrafica_scheda.css e assets/anagrafica_scheda.js.
-4. Eliminare manualmente dal server il solo vecchio file `gestione_referenti.php`. Nessuna migrazione SQL. Non caricare tests o documentazione nel sito. Non eliminare o sovrascrivere private: disattivare l'eliminazione automatica WinSCP, soprattutto per security.php e dati_security.php.
-5. Aprire Anagrafiche > Gestione anagrafica oppure un ente dall'elenco. Se la migrazione della cifratura è ancora in corso, completarla dalla procedura esistente prima di usare le anagrafiche.
+3. Caricare con WinSCP: anagrafica.php, anagrafica_singola.php, pannello.php; includes/layout.php, includes/anagrafica_scheda.php, includes/anagrafica_scheda_sezioni.php; assets/anagrafica_scheda.css e assets/anagrafica_scheda.js.
+4. Eliminare manualmente dal server i vecchi file `gestione_referenti.php`, `gestione_altri.php`, `dashboard_anagrafica.php` e il componente non più utilizzato `includes/anagrafica_persone.php`. Nessuna migrazione SQL. Non caricare tests o documentazione nel sito. Non eliminare o sovrascrivere private: disattivare l'eliminazione automatica WinSCP, soprattutto per security.php e dati_security.php.
+5. Aprire Anagrafiche > Anagrafica e scegliere un ente dall'elenco. Se la migrazione della cifratura è ancora in corso, completarla dalla procedura esistente prima di usare le anagrafiche.
 
 ## Verifiche automatiche
 
-Test di dominio su database effimero prima e dopo la cifratura: modifiche, ID estranei, duplicati, recapito predefinito, revisioni obsolete, rollback persona/email e RUNTS, selezione Cesvot, FK e cancellazioni collegate. Browser desktop/mobile prima e dopo la cifratura: pannello, scheda, salvataggi indipendenti, bozza principale conservata, persone/recapiti, persistenza, CSRF e rifiuto dei POST senza permessi. Nessuna modifica al database Altervista e nessuna email reale nei test.
+Test di dominio su database effimero prima e dopo la cifratura: modifiche, ID estranei, duplicati, recapito predefinito, revisioni obsolete, rollback persona/email e RUNTS, selezione Cesvot, FK e cancellazioni collegate. Browser desktop/mobile prima e dopo la cifratura: accesso diretto all’anagrafica, scheda, salvataggi indipendenti, bozza principale conservata, persone/recapiti, persistenza, CSRF e rifiuto dei POST senza permessi. Nessuna modifica al database Altervista e nessuna email reale nei test.

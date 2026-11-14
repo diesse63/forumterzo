@@ -30,10 +30,10 @@ try{
  }
 }catch(Throwable $e){http_response_code(503);$entity=null;$message=$e instanceof PDOException?'Scheda temporaneamente non disponibile.':$e->getMessage();}
 if(!$entity&&$message==='')http_response_code(404);
-page_start('Scheda anagrafica','Gestisci dati dell’ente, persone, email e telefoni; confronta RUNTS e recapiti Cesvot.',['Anagrafiche','Enti','Scheda']);
+page_start('Scheda anagrafica','Gestisci dati dell’ente, persone, email e telefoni; confronta RUNTS e recapiti Cesvot.',['Anagrafiche','Anagrafica','Scheda']);
 ?>
 <link rel="stylesheet" href="/assets/anagrafica.css"><link rel="stylesheet" href="/assets/anagrafica_scheda.css">
-<p><a href="/anagrafica.php">← Torna all’anagrafica</a> · <a href="/dashboard_anagrafica.php">Gestione anagrafica</a></p>
+<p><a href="/anagrafica.php">← Torna all’anagrafica</a></p>
 <div id="scheda-feedback" aria-live="polite"><?php if($message):?><aside class="error" role="alert"><?=uh($message)?></aside><?php elseif(isset($_GET['salvato'])||isset($_GET['creato'])):?><aside role="status" data-save-ok>Ente salvato correttamente. Operazione completata.</aside><?php endif;?></div>
 <?php if(!$entity):?><p><?= $message===''?'Ente non trovato.':'Nessun dato modificabile disponibile.' ?></p></main></body></html><?php exit;endif;
 $revision=scheda_revision($entity);$etsIds=[];foreach($tipologie as $t)if(enti_is_ets($t['Tipologia']))$etsIds[]=(int)$t['ID'];

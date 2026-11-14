@@ -30,7 +30,7 @@ try{
   try{$tipologie=enti_tipologie($p);$data=enti_list($p,$params['q'],$params['tipo'],$params['pagina']);}catch(Throwable $ignored){}
  }
 }
-page_start('Anagrafica enti','Consulta gli enti, cerca le persone collegate e inserisci nuove anagrafiche.',['Anagrafiche','Enti']);
+page_start('Anagrafica enti','Consulta gli enti, cerca le persone collegate e inserisci nuove anagrafiche.',['Anagrafiche','Anagrafica']);
 ?>
 <link rel="stylesheet" href="/assets/anagrafica.css">
 <?php if($message):?><aside class="error" role="alert"><?=uh($message)?></aside><?php endif;?>

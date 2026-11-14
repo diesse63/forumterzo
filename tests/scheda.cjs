@@ -8,8 +8,7 @@ const {chromium}=require('playwright'),{spawn}=require('child_process');
   browser=await chromium.launch({channel:'chrome',headless:true,args:['--no-sandbox']});const page=await browser.newPage({viewport:{width:1280,height:1000}});
   await page.goto(base+'/login.php');await page.locator('input[name=nome]').fill('admin');await page.locator('input[name=password]').fill('1234567.');
   await Promise.all([page.waitForURL('**/pannello.php'),page.getByRole('button',{name:'Accedi',exact:true}).click()]);
-  await page.goto(base+'/dashboard_anagrafica.php');check(await page.locator('.anagrafiche-card').count()===2,'Dashboard incompleta');
-  await page.getByRole('link',{name:/Elenco enti/}).click();
+  await page.getByRole('link',{name:'Anagrafica',exact:true}).click();
   await page.locator('input[name=q]').fill('SCHEDA BROWSER '+tag);await page.waitForFunction(()=>document.querySelector('.enti-count strong')?.textContent==='1');
   await page.locator('.enti-table .enti-open').click();await page.waitForURL('**/anagrafica_singola.php?*');const url=page.url();
   const save=async form=>{await form.locator('button').last().click();await page.waitForFunction(()=>document.querySelector('#scheda-feedback [role=alert]')||document.querySelector('#scheda-feedback [role=status]')?.textContent.includes('Operazione salvata correttamente.'));check(!await page.locator('#scheda-feedback [role=alert]').count(),await page.locator('#scheda-feedback').textContent());};
@@ -34,7 +33,7 @@ const {chromium}=require('playwright'),{spawn}=require('child_process');
   await page.goto(url);check(await page.locator('#scheda-save-main').count()===0,'Salvataggio principale visibile a lettura');
   const denied=await page.request.post(url,{form:{action:'entity_save',csrf,revision,SOGGETTO:'VIETATO',ID_TIPOLOGIA:'100'}});check(denied.status()===403,'POST user lettura ammesso');
   const deniedPerson=await page.request.post(url,{form:{action:'person_save',csrf,revision,name:'VIETATO',type:'LR',email:'a@example.invalid'}});check(deniedPerson.status()===403,'POST persona senza permessi ammesso');
-  await page.goto(base+'/dashboard_anagrafica.php');check(await page.locator('.anagrafiche-card').count()===1,'Pannelli persone non autorizzati visibili');
+  await page.goto(base+'/anagrafica.php');check(await page.locator('.enti-primary').count()===0,'Creazione ente non autorizzata visibile');
   console.log('OK: scheda '+tag+', dashboard, salvataggi indipendenti, bozza conservata, persone, mail, telefoni, mobile, CSRF e permessi server.');
  }finally{if(browser)await browser.close();server.kill();}
 })().catch(e=>{console.error(e);process.exit(1)});
