@@ -10,7 +10,7 @@ const {chromium}=require('playwright'),{spawn}=require('child_process');
   await Promise.all([page.waitForURL('**/pannello.php'),page.getByRole('button',{name:'Accedi',exact:true}).click()]);
   await page.getByRole('main').getByRole('link',{name:'Anagrafica',exact:true}).click();
   await page.locator('input[name=q]').fill('SCHEDA BROWSER '+tag);await page.waitForFunction(()=>document.querySelector('.enti-count strong')?.textContent==='1');
-  await page.locator('.enti-table .enti-open').click();await page.waitForURL('**/anagrafica_singola.php?*');const url=page.url();
+  await page.locator('.enti-cards .enti-open').click();await page.waitForURL('**/anagrafica_singola.php?*');const url=page.url();
   const save=async form=>{await form.locator('button').last().click();await page.waitForFunction(()=>document.querySelector('#scheda-feedback [role=alert]')||document.querySelector('#scheda-feedback [role=status]')?.textContent.includes('Operazione salvata correttamente.'));check(!await page.locator('#scheda-feedback [role=alert]').count(),await page.locator('#scheda-feedback').textContent());};
   await page.locator('#scheda-main-form input[name=SOGGETTO]').fill('SCHEDA BROWSER '+tag+' MODIFICATA');
   let contact=page.locator('form[data-new-contact=Mail]');await contact.locator('input[name=value]').fill('browser.'+tag.toLowerCase()+'@example.invalid');await save(contact);
@@ -37,3 +37,4 @@ const {chromium}=require('playwright'),{spawn}=require('child_process');
   console.log('OK: scheda '+tag+', dashboard, salvataggi indipendenti, bozza conservata, persone, mail, telefoni, mobile, CSRF e permessi server.');
  }finally{if(browser)await browser.close();server.kill();}
 })().catch(e=>{console.error(e);process.exit(1)});
+

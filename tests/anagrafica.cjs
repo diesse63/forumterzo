@@ -16,7 +16,7 @@ const {spawn}=require('child_process');
   check((await page.locator('h1').textContent())==='Anagrafica enti','Intestazione anagrafica');
   await page.locator('input[name=q]').fill('ricercabile');
   await page.waitForFunction(()=>document.querySelector('.enti-count strong')?.textContent==='1');
-  await page.locator('.enti-table .enti-open').click();
+  await page.locator('.enti-cards .enti-open').click();
   await page.waitForURL('**/anagrafica_singola.php?*');
   check((await page.locator('body').textContent()).includes('ente@example.invalid'),'Scheda non mostra email');
   await page.goto('http://127.0.0.1:8099/anagrafica.php');
@@ -35,7 +35,7 @@ const {spawn}=require('child_process');
   await Promise.all([page.waitForURL('**/anagrafica_singola.php?*'),page.getByRole('button',{name:'Salva ente',exact:true}).click()]);
   check((await page.locator('body').textContent()).includes('Ente salvato correttamente'),'Salvataggio browser');
   await page.setViewportSize({width:375,height:900});await page.goto('http://127.0.0.1:8099/anagrafica.php?q=CLONE%20BROWSER');
-  check(await page.locator('.enti-cards').isVisible()&&!await page.locator('.enti-table-wrap').isVisible(),'Schede mobile');
+  check(await page.locator('.enti-cards').isVisible()&&await page.locator('.enti-table-wrap').count()===0,'Schede mobile');
   check(!await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),'Overflow mobile');
   await page.goto('http://127.0.0.1:8099/logout.php');await page.getByRole('button',{name:'Conferma uscita'}).click();
   await page.locator('input[name=nome]').fill('user');await page.locator('input[name=password]').fill('1234567.');
@@ -49,3 +49,4 @@ const {spawn}=require('child_process');
   console.log('OK: navigazione, filtro dinamico, scheda, modale, RUNTS, creazione, mobile e blocco user lettura.');
  }finally{if(browser)await browser.close();server.kill();}
 })().catch(e=>{console.error(e);process.exit(1)});
+

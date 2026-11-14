@@ -6,11 +6,12 @@
  });
  const filters=document.querySelector('.enti-filters');
  let filterTimer,filterRequest;
- async function refreshList(){
+ async function refreshList(keepPage=false){
   if(!filters)return;
   filterRequest?.abort();filterRequest=new AbortController();
   const url=new URL('/anagrafica.php',location.origin);
   new FormData(filters).forEach((v,k)=>url.searchParams.set(k,v));
+  if(keepPage){const page=new URL(location.href).searchParams.get('pagina');if(page)url.searchParams.set('pagina',page);}
   const activeRequest=filterRequest;
   try{
    const response=await fetch(url,{signal:activeRequest.signal});
@@ -19,11 +20,13 @@
    const results=parsed.getElementById('enti-results');
    if(!results){window.location.href=url;return;}
    document.getElementById('enti-results')?.replaceWith(document.importNode(results,true));
+   if(keepPage)url.searchParams.set('pagina',results.dataset.page||'1');
    history.replaceState(null,'',url);
    const newLink=document.querySelector('.enti-primary');
    if(newLink){const newUrl=new URL(url);newUrl.searchParams.set('nuovo','1');newLink.href=newUrl;}
   }catch(error){if(error.name!=='AbortError'){window.location.href=url;}}
  }
+ window.addEventListener('anagrafica:changed',()=>{clearTimeout(filterTimer);refreshList(true);});
  filters?.addEventListener('submit',event=>{event.preventDefault();clearTimeout(filterTimer);refreshList();});
  filters?.querySelector('input[name=q]')?.addEventListener('input',()=>{clearTimeout(filterTimer);filterTimer=setTimeout(refreshList,400);});
  filters?.querySelector('select[name=tipo]')?.addEventListener('change',()=>{clearTimeout(filterTimer);refreshList();});
@@ -77,3 +80,4 @@
  query.addEventListener('input',()=>{clearTimeout(timer);request?.abort();timer=setTimeout(search,400);});
  document.getElementById('runts-search').addEventListener('submit',event=>{event.preventDefault();clearTimeout(timer);search();});
 })();
+

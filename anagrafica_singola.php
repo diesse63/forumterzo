@@ -4,6 +4,9 @@ require_once __DIR__.'/includes/auth.php';
 $user=require_access('associazioni','lettura');
 require_once __DIR__.'/includes/anagrafica_scheda.php';
 $id=filter_var($_GET['id']??null,FILTER_VALIDATE_INT,['options'=>['min_range'=>1]])?:0;
+$mode=is_string($_GET['modale']??null)&&in_array($_GET['modale'],['Mail','Telefono','LR','AS','runts','dati'],true)?$_GET['modale']:'';
+if($mode!==''){header("Content-Security-Policy: default-src 'self'; style-src 'self' 'unsafe-inline'; form-action 'self'; frame-ancestors 'self'");header('X-Frame-Options: SAMEORIGIN');}
+$schedaUrl='/anagrafica_singola.php?id='.$id.($mode!==''?'&modale='.rawurlencode($mode):'');
 $message='';$entity=null;$tipologie=[];$runts=['status'=>'MISSING','record'=>null];$cesvot=['Mail'=>[],'Telefono'=>[]];$runtsResults=[];
 $can=function(string $action,array $in=[])use($user):bool{foreach(scheda_needed_panels($action,$in) as $panel)if(!allowed($user,$panel,'scrittura'))return false;return true;};
 try{
@@ -14,7 +17,7 @@ try{
   check_csrf();
   scheda_mutate($p,$id,(string)($_POST['revision']??''),$action,$_POST);
   if($action==='entity_delete'){header('Location: /anagrafica.php?eliminato=1',true,303);exit;}
-  header('Location: /anagrafica_singola.php?id='.$id.'&salvato=1',true,303);exit;
+  header('Location: '.$schedaUrl.'&salvato=1',true,303);exit;
  }
 }catch(Throwable $e){
  http_response_code($e instanceof PDOException?409:400);
@@ -33,17 +36,18 @@ if(!$entity&&$message==='')http_response_code(404);
 page_start('Scheda anagrafica','Gestisci dati dell’ente, persone, email e telefoni; confronta RUNTS e recapiti Cesvot.',['Anagrafiche','Anagrafica','Scheda']);
 ?>
 <link rel="stylesheet" href="/assets/anagrafica.css"><link rel="stylesheet" href="/assets/anagrafica_scheda.css">
-<p><a href="/anagrafica.php">← Torna all’anagrafica</a></p>
+<?php if($mode!==''):?><div id="scheda-embed-mode" data-mode="<?=uh($mode)?>" hidden></div><?php endif;?>
+<p id="scheda-backlink"><a href="/anagrafica.php">← Torna all’anagrafica</a></p>
 <div id="scheda-feedback" aria-live="polite"><?php if($message):?><aside class="error" role="alert"><?=uh($message)?></aside><?php elseif(isset($_GET['salvato'])||isset($_GET['creato'])):?><aside role="status" data-save-ok>Ente salvato correttamente. Operazione completata.</aside><?php endif;?></div>
 <?php if(!$entity):?><p><?= $message===''?'Ente non trovato.':'Nessun dato modificabile disponibile.' ?></p></main></body></html><?php exit;endif;
 $revision=scheda_revision($entity);$etsIds=[];foreach($tipologie as $t)if(enti_is_ets($t['Tipologia']))$etsIds[]=(int)$t['ID'];
-$openForm=function(string $action,array $extra=[],string $attributes='')use($id,$revision):void{
- echo '<form method="post" action="/anagrafica_singola.php?id='.$id.'" class="scheda-form" '.$attributes.'><input type="hidden" name="csrf" value="'.uh(csrf()).'"><input type="hidden" name="revision" value="'.uh($revision).'"><input type="hidden" name="action" value="'.uh($action).'">';
+$openForm=function(string $action,array $extra=[],string $attributes='')use($schedaUrl,$revision):void{
+ echo '<form method="post" action="'.uh($schedaUrl).'" class="scheda-form" '.$attributes.'><input type="hidden" name="csrf" value="'.uh(csrf()).'"><input type="hidden" name="revision" value="'.uh($revision).'"><input type="hidden" name="action" value="'.uh($action).'">';
  foreach($extra as $key=>$value)echo '<input type="hidden" name="'.uh($key).'" value="'.uh($value).'">';
 };
 $ownerNames=['ente'=>'Ente'];foreach($entity['Persone'] as $person)$ownerNames['persona:'.$person['ID']]=$person['Nome'].' ('.$person['Tipo'].')';
 ?>
-<div class="scheda-grid">
+<div class="scheda-grid scheda-overview">
 <section class="scheda-card scheda-main"><h2 id="scheda-entity-name"><?=uh($entity['SOGGETTO'])?></h2><p>Dati principali</p>
 <?php $openForm('entity_save',[],'id="scheda-main-form" data-ets="'.uh(json_encode($etsIds)).'"'); ?>
 <fieldset <?=$can('entity_save')?'':'disabled'?>>
@@ -60,3 +64,4 @@ $ownerNames=['ente'=>'Ente'];foreach($entity['Persone'] as $person)$ownerNames['
 </div>
 <div class="scheda-live"><?php require __DIR__.'/includes/anagrafica_scheda_sezioni.php';?></div>
 <script src="/assets/anagrafica_scheda.js" defer></script></main></body></html>
+

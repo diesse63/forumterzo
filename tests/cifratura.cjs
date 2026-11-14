@@ -9,7 +9,7 @@ const {chromium}=require('playwright'),{spawn}=require('child_process'),fs=requi
   await Promise.all([page.waitForURL('**/pannello.php'),page.getByRole('button',{name:'Accedi',exact:true}).click()]);
   await page.goto(base+'/anagrafica.php?q=ricercabile');
   check(await page.locator('.enti-count strong').textContent()==='1','Ricerca cifrata browser');
-  await page.locator('.enti-table .enti-open').click();await page.waitForURL('**/anagrafica_singola.php?*');
+  await page.locator('.enti-cards .enti-open').click();await page.waitForURL('**/anagrafica_singola.php?*');
   check((await page.locator('body').textContent()).includes('ente@example.invalid'),'Recapito cifrato non leggibile');
   await page.goto(base+'/anagrafica.php?nuovo=1');
   await page.locator('#ente-name').fill('BROWSER CIFRATO');await page.locator('#ente-type').selectOption('100');
@@ -30,3 +30,4 @@ const {chromium}=require('playwright'),{spawn}=require('child_process'),fs=requi
   console.log('OK: browser su dati cifrati, ricerca, recapiti, inserimento, bozza email e fail-closed senza chiave.');
  }finally{if(browser)await browser.close();server.kill();}
 })().catch(e=>{console.error(e);process.exit(1)});
+

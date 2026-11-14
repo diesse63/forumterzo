@@ -58,6 +58,10 @@ function scheda_runts(PDO $p,array $entity):array {
   $rCf=enti_upper(preg_replace('/\s+/u','',(string)($r['CodiceFiscale']??''))??'');
   if($rCf!==''&&(($cf!==''&&$rCf===$cf)||($cf===''&&enti_upper(trim((string)$r['Denominazione']))===enti_upper(trim($entity['SOGGETTO'])))))$matches[]=$r;
  }
+ return scheda_runts_matches($entity,$matches);
+}
+function scheda_runts_matches(array $entity,array $matches):array {
+ $cf=enti_upper(preg_replace('/\s+/u','',(string)($entity['CODICEFISCALE']??''))??'');
  if(count($matches)!==1)return ['status'=>count($matches)>1?'AMBIGUO':'MISSING','record'=>null];
  $r=$matches[0];$name=enti_upper(trim(($r['Cognome']??'').' '.($r['Nome']??'')));$personMatch=$name==='';
  foreach($entity['Persone'] as $person)if($person['Tipo']==='LR'&&enti_upper(trim($person['Nome']))===$name)$personMatch=true;
@@ -131,3 +135,4 @@ function scheda_mutate(PDO $p,int $id,string $revision,string $action,array $in)
   $p->commit();
  }catch(Throwable $e){if($p->inTransaction())$p->rollBack();throw $e;}
 }
+
