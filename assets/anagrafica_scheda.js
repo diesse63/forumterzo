@@ -33,7 +33,7 @@
    if(!live||!fresh||!doc.querySelector('[data-save-ok]'))throw Error('Risposta inattesa: verificare l’esito prima di riprovare.');
    document.querySelector('.scheda-live').replaceWith(live);
    const current=document.querySelector('#scheda-main-form');
-   if(main||!dirty){current.replaceWith(fresh);baseline=values(fresh);dirty=false;toggle();}
+   if(main||!dirty){current.replaceWith(fresh);document.querySelector('#scheda-entity-name').textContent=doc.querySelector('#scheda-entity-name').textContent;baseline=values(fresh);dirty=false;toggle();}
    else if(values(fresh)===baseline){current.elements.revision.value=fresh.elements.revision.value;}
    else{notify('Operazione salvata. I dati principali sono cambiati: prima di salvarli, ricaricare e confrontare le modifiche.',true);return;}
    notify('Operazione salvata correttamente.');

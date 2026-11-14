@@ -44,7 +44,7 @@ $openForm=function(string $action,array $extra=[],string $attributes='')use($id,
 $ownerNames=['ente'=>'Ente'];foreach($entity['Persone'] as $person)$ownerNames['persona:'.$person['ID']]=$person['Nome'].' ('.$person['Tipo'].')';
 ?>
 <div class="scheda-grid">
-<section class="scheda-card scheda-main"><h2>Dati principali</h2>
+<section class="scheda-card scheda-main"><h2 id="scheda-entity-name"><?=uh($entity['SOGGETTO'])?></h2><p>Dati principali</p>
 <?php $openForm('entity_save',[],'id="scheda-main-form" data-ets="'.uh(json_encode($etsIds)).'"'); ?>
 <fieldset <?=$can('entity_save')?'':'disabled'?>>
 <label>Denominazione / Ragione sociale<input name="SOGGETTO" required maxlength="768" value="<?=uh($entity['SOGGETTO'])?>"></label>
