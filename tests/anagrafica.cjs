@@ -12,7 +12,7 @@ const {spawn}=require('child_process');
   await page.locator('input[name=nome]').fill('admin');await page.locator('input[name=password]').fill('1234567.');
   await Promise.all([page.waitForURL('**/pannello.php'),page.getByRole('button',{name:'Accedi',exact:true}).click()]);
   await page.getByRole('button',{name:'Anagrafiche'}).click();
-  await page.getByRole('link',{name:'Anagrafica',exact:true}).click();
+  await page.getByRole('navigation',{name:'Menu principale'}).getByRole('link',{name:'Anagrafica',exact:true}).click();
   check((await page.locator('h1').textContent())==='Anagrafica enti','Intestazione anagrafica');
   await page.locator('input[name=q]').fill('ricercabile');
   await page.waitForFunction(()=>document.querySelector('.enti-count strong')?.textContent==='1');

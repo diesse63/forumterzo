@@ -8,7 +8,7 @@ const {chromium}=require('playwright'),{spawn}=require('child_process');
   browser=await chromium.launch({channel:'chrome',headless:true,args:['--no-sandbox']});const page=await browser.newPage({viewport:{width:1280,height:1000}});
   await page.goto(base+'/login.php');await page.locator('input[name=nome]').fill('admin');await page.locator('input[name=password]').fill('1234567.');
   await Promise.all([page.waitForURL('**/pannello.php'),page.getByRole('button',{name:'Accedi',exact:true}).click()]);
-  await page.getByRole('link',{name:'Anagrafica',exact:true}).click();
+  await page.getByRole('main').getByRole('link',{name:'Anagrafica',exact:true}).click();
   await page.locator('input[name=q]').fill('SCHEDA BROWSER '+tag);await page.waitForFunction(()=>document.querySelector('.enti-count strong')?.textContent==='1');
   await page.locator('.enti-table .enti-open').click();await page.waitForURL('**/anagrafica_singola.php?*');const url=page.url();
   const save=async form=>{await form.locator('button').last().click();await page.waitForFunction(()=>document.querySelector('#scheda-feedback [role=alert]')||document.querySelector('#scheda-feedback [role=status]')?.textContent.includes('Operazione salvata correttamente.'));check(!await page.locator('#scheda-feedback [role=alert]').count(),await page.locator('#scheda-feedback').textContent());};
