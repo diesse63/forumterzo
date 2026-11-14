@@ -6,7 +6,7 @@ try{
  page_start('Pannello POImanager');
  echo '<p>Utente: '.uh($u['Profilo']['nome']).' · Ruolo: '.uh($u['Ruolo']).'</p>';
  if($u['Ruolo']==='ghost')echo '<aside>Modalità sviluppo: accesso completo ghost attivo. Disabilitare prima della produzione.</aside>';
- $routes=['gestione_email'=>'/gestione_email.php','associazioni'=>'/anagrafica.php','utenti'=>'/utenti.php','importazione'=>'/importazione_sqlite/index.php'];
+ $routes=['gestione_email'=>'/gestione_email.php','associazioni'=>'/dashboard_anagrafica.php','utenti'=>'/utenti.php','importazione'=>'/importazione_sqlite/index.php'];
  echo '<ul>';
  foreach(poimanager_db()->query('SELECT * FROM Pannelli ORDER BY Titolo') as $p){
   if(!allowed($u,$p['Codice']))continue;
@@ -17,3 +17,4 @@ try{
   echo '</li>';
  }echo '</ul></main></body></html>';
 }catch(Throwable $e){http_response_code(503);echo 'Pannello temporaneamente non disponibile. Verificare installazione utenti.';}
+

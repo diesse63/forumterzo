@@ -32,6 +32,7 @@ jobs:
           php tests/import_tabelle.php
           php tests/check_schema.php
           php tests/anagrafica.php
+          php tests/scheda.php
           php tests/email.php
           php tests/email_diagnostica.php
           php tests/ghost.php
@@ -48,6 +49,7 @@ jobs:
           npm install --no-save --package-lock=false playwright@1.56.1
           node tests/layout.cjs
           node tests/anagrafica.cjs
+          node tests/scheda.cjs
           node tests/bridge.cjs
           node tests/email.cjs
       - name: Migrazione e regressioni cifratura dati reali simulati
@@ -56,8 +58,11 @@ jobs:
         run: |
           php -d disable_functions=sodium_crypto_secretbox,sodium_crypto_secretbox_open tests/cifratura.php
           node tests/cifratura.cjs
+          php tests/scheda.php
+          SCHEDA_CIFRATA=1 node tests/scheda.cjs
 
       - name: Recupero accessi con chiave perduta su database effimero
         env:
           POIMANAGER_TEST: '1'
         run: php tests/recupero.php
+

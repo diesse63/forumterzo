@@ -1,0 +1,71 @@
+<?php
+declare(strict_types=1);
+if(getenv('POIMANAGER_TEST')!=='1')exit(1);
+require dirname(__DIR__).'/includes/auth.php';
+require dirname(__DIR__).'/includes/anagrafica_scheda.php';
+function sc_check(bool $v,string $why):void{if(!$v)throw new RuntimeException($why);}
+function sc_bad(callable $f,string $why):void{$bad=false;try{$f();}catch(RuntimeException $e){$bad=true;}sc_check($bad,$why);}
+$p=poimanager_db();$encrypted=dc_active($p);$tag=$encrypted?'CIFRATA':'NORMALE';
+$id=enti_create($p,['SOGGETTO'=>'SCHEDA TEST '.$tag,'ID_TIPOLOGIA'=>100,'CODICEFISCALE'=>'SC'.($encrypted?'ENC':'PLAIN')]);
+$other=enti_create($p,['SOGGETTO'=>'SCHEDA ESTERNA '.$tag,'ID_TIPOLOGIA'=>101]);
+$mutate=function(string $action,array $in=[])use($p,$id):void{scheda_mutate($p,$id,scheda_revision(enti_detail($p,$id)),$action,$in);};
+$oldRevision=scheda_revision(enti_detail($p,$id));
+$mutate('entity_save',['SOGGETTO'=>'SCHEDA TEST '.$tag,'ID_TIPOLOGIA'=>101,'TAVOLO'=>'1','DIRETTIVO_DELEGAZIONE'=>'1']);
+sc_check((int)enti_detail($p,$id)['TAVOLO']===0,'Flag non ETS salvato');
+sc_bad(fn()=>scheda_mutate($p,$id,$oldRevision,'entity_save',['SOGGETTO'=>'SOVRASCRITTURA','ID_TIPOLOGIA'=>100]),'Revisione obsoleta accettata');
+$mutate('entity_save',['SOGGETTO'=>'SCHEDA TEST '.$tag,'ID_TIPOLOGIA'=>100,'TAVOLO'=>'1']);
+$mutate('person_save',['name'=>'PERSONA SCHEDA '.$tag,'type'=>'LR','email'=>'persona.'.strtolower($tag).'@example.invalid']);
+$detail=enti_detail($p,$id);$person=$detail['Persone'][0];$personId=(int)$person['ID'];
+sc_check(count($detail['Mail'])===1&&$detail['Mail'][0]['TipoSoggetto']==='REFERENTE','Recapito persona non collegato');
+$before=count($detail['Persone']);
+sc_bad(fn()=>$mutate('person_save',['name'=>'DA ANNULLARE','type'=>'AS','email'=>'non-email']),'Email invalida accettata');
+sc_check(count(enti_detail($p,$id)['Persone'])===$before,'Rollback persona e email fallito');
+$foreign=dc_insert($p,'Soggetti',['ID_Associazione'=>$other,'Nome'=>'ALTRA PERSONA '.$tag,'Tipo'=>'AS']);
+sc_bad(fn()=>$mutate('person_save',['person_id'=>$foreign,'name'=>'ALTERATA','type'=>'AS']),'Persona estranea modificata');
+sc_bad(fn()=>$mutate('mail_save',['owner'=>'persona:'.$foreign,'value'=>'idore@example.invalid']),'Titolare estraneo accettato');
+$mutate('mail_save',['value'=>'uno.'.strtolower($tag).'@example.invalid','preferred'=>'1']);
+$mutate('mail_save',['value'=>'due.'.strtolower($tag).'@example.invalid','preferred'=>'1','pec'=>'1']);
+$detail=enti_detail($p,$id);$own=array_values(array_filter($detail['Mail'],fn($r)=>$r['TipoSoggetto']==='ASSOCIAZIONE'));
+sc_check(array_sum(array_column($own,'Predefinito'))===1,'Più predefiniti per titolare');
+sc_bad(fn()=>$mutate('mail_save',['value'=>'UNO.'.strtolower($tag).'@example.invalid']),'Duplicato maiuscolo accettato');
+sc_bad(fn()=>$mutate('mail_save',['contact_id'=>$own[0]['ID'],'owner'=>'persona:'.$personId,'value'=>'spostata@example.invalid']),'Spostamento titolare ammesso');
+$mutate('phone_save',['owner'=>'persona:'.$personId,'value'=>'+39 055 123','preferred'=>'1']);
+sc_bad(fn()=>$mutate('phone_save',['value'=>'++']),'Telefono senza cifre ammesso');
+$mutate('person_save',['person_id'=>$personId,'name'=>'PERSONA AGGIORNATA '.$tag,'type'=>'LR']);
+sc_check(enti_detail($p,$id)['Persone'][0]['Nome']==='PERSONA AGGIORNATA '.$tag,'Modifica persona');
+$cf='SCRUNTS'.($encrypted?'E':'P');
+dc_insert($p,'Runts',['CodiceFiscale'=>$cf,'Denominazione'=>'DA RUNTS '.$tag,'Cognome'=>'PERSONA','Nome'=>'PROPOSTA '.$tag]);
+$beforeName=enti_detail($p,$id)['SOGGETTO'];
+sc_bad(fn()=>$mutate('runts_align',['runts_cf'=>$cf,'import_person'=>'1']),'Ruolo RUNTS implicito accettato');
+sc_check(enti_detail($p,$id)['SOGGETTO']===$beforeName,'Allineamento non atomico');
+$mutate('runts_align',['runts_cf'=>$cf,'import_person'=>'1','person_type'=>'AS']);
+$detail=enti_detail($p,$id);sc_check($detail['CODICEFISCALE']===$cf&&count($detail['Persone'])===2,'Allineamento RUNTS');
+$mutate('runts_align',['runts_cf'=>$cf,'import_person'=>'1','person_type'=>'AS']);sc_check(count(enti_detail($p,$id)['Persone'])===2,'Persona RUNTS duplicata');
+$cm=(int)dc_insert($p,'CesvotMail',['Denominazione'=>'DA RUNTS '.$tag,'Mail'=>'cesvot.'.strtolower($tag).'@example.invalid']);
+$ct=(int)dc_insert($p,'CesvotTelefono',['Denominazione'=>'DA RUNTS '.$tag,'Telefono'=>'055 987654']);
+$foreignCm=(int)dc_insert($p,'CesvotMail',['Denominazione'=>'ALTRO ENTE','Mail'=>'altra@example.invalid']);
+$candidates=scheda_cesvot($p,enti_detail($p,$id));sc_check(count($candidates['Mail'])===1&&count($candidates['Telefono'])===1,'Confronto Cesvot');
+sc_bad(fn()=>$mutate('cesvot_import',['table'=>'Mail','source_ids'=>[$foreignCm]]),'Cesvot estraneo ammesso');
+$mutate('cesvot_import',['table'=>'Mail','source_ids'=>[$cm]]);$mutate('cesvot_import',['table'=>'Telefono','source_ids'=>[$ct]]);
+sc_check(!scheda_cesvot($p,enti_detail($p,$id))['Mail'],'Cesvot già caricato riproposto');
+$ml=(int)dc_insert($p,'MailList',['Descrizione'=>'LISTA SCHEDA '.$tag]);$personMail=array_values(array_filter(enti_detail($p,$id)['Mail'],fn($r)=>$r['TipoSoggetto']==='REFERENTE'))[0];
+$p->prepare('INSERT INTO ListaMail (IDListaMail,IDMail) VALUES (?,?)')->execute([$ml,$personMail['ID']]);
+$mutate('person_delete',['person_id'=>$personId]);
+sc_check((int)$p->query('SELECT COUNT(*) FROM ListaMail WHERE IDMail='.(int)$personMail['ID'])->fetchColumn()===0,'Iscrizioni orfane');
+sc_check(!dc_find($p,'Mail',['ID'=>$personMail['ID']]),'Mail persona non eliminata');
+$eventType=(int)dc_insert($p,'AgoraTipoEvento',['IntestazionePagina'=>'SCHEDA '.$tag]);
+$event=(int)dc_insert($p,'Agora',['Data'=>'2026-11-14 '.$tag,'IDTipoEvento'=>$eventType]);
+$present=(int)dc_insert($p,'AgoraPresenti',['IDRiunioni'=>$event,'IDAssociazione'=>$id]);
+sc_bad(fn()=>$mutate('entity_delete'),'Ente Agorà eliminato');
+$p->prepare('DELETE FROM AgoraPresenti WHERE ID=?')->execute([$present]);
+$mutate('entity_delete');sc_check(!enti_detail($p,$id),'Ente non eliminato');
+sc_check((int)$p->query('SELECT COUNT(*) FROM Soggetti WHERE ID_Associazione='.$id)->fetchColumn()===0,'Persone orfane');
+// Scheda autonoma per le prove browser, senza alterare le fixture degli altri test.
+$browser=enti_create($p,['SOGGETTO'=>'SCHEDA BROWSER '.$tag,'ID_TIPOLOGIA'=>100]);
+if($encrypted){
+ $raw=$p->query('SELECT SOGGETTO,_Cifrato FROM Associazioni WHERE ID='.$browser)->fetch();
+ sc_check($raw['SOGGETTO']!=='SCHEDA BROWSER '.$tag&&str_starts_with($raw['_Cifrato'],'dc1:'),'Salvataggio scheda in chiaro');
+}
+sc_check(in_array('soggetti',scheda_needed_panels('runts_align',['import_person'=>'1']),true),'Permessi persona RUNTS mancanti');
+sc_check(in_array('mail',scheda_needed_panels('person_save',['email'=>'a@b.invalid']),true),'Permessi mail persona mancanti');
+echo 'OK: scheda '.$tag.', revisioni, titolari, CRUD, duplicati, predefiniti, rollback, Cesvot, RUNTS, vincoli e cancellazioni collegate.'.PHP_EOL;

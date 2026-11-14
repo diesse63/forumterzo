@@ -25,7 +25,11 @@ function layout_start(string $title, string $description='', array $context=[]):
  $items=[];
  if($user){
   $items[]=['label'=>'Pannello','url'=>'/pannello.php'];
-  if(allowed($user,'associazioni'))$items[]=['label'=>'Anagrafiche','children'=>[['label'=>'Enti','url'=>'/anagrafica.php']]];
+  if(allowed($user,'associazioni')){
+   $anagrafiche=[['label'=>'Gestione anagrafica','url'=>'/dashboard_anagrafica.php'],['label'=>'Enti','url'=>'/anagrafica.php']];
+   if(allowed($user,'soggetti')){$anagrafiche[]=['label'=>'Referenti','url'=>'/gestione_referenti.php'];$anagrafiche[]=['label'=>'Altri soggetti','url'=>'/gestione_altri.php'];}
+   $items[]=['label'=>'Anagrafiche','children'=>$anagrafiche];
+  }
   $services=[];
   if(allowed($user,'utenti','scrittura'))$services[]=['label'=>'Utenti','url'=>'/utenti.php'];
   if(allowed($user,'importazione','scrittura'))$services[]=['label'=>'Importazione SQLite','url'=>'/importazione_sqlite/index.php'];
@@ -52,3 +56,4 @@ function layout_start(string $title, string $description='', array $context=[]):
  }
  echo '</ul></nav><main class="page-main"><header class="page-heading"><h1 class="page-title">'.uh($title).'</h1><p class="page-description">'.uh($description).'</p></header>';
 }
+
