@@ -67,10 +67,6 @@ function require_access(string $panel,string $mode='lettura'): array {
 }
 function user_login(string $name,string $password): void {
  $db=poimanager_db();$s=security();
- // Chiave per IP: nessun nome utente né account ghost nella tabella tentativi.
- $rate=hash_hmac('sha256',(string)($_SERVER['REMOTE_ADDR']??'unknown'),user_key());
- $q=$db->prepare('SELECT Tentativi,Ultimo FROM AccessiTentativi WHERE Chiave=?');$q->execute([$rate]);$r=$q->fetch();
- if($r&&(int)$r['Tentativi']>=5&&time()-(int)$r['Ultimo']<900)throw new RuntimeException('Troppi tentativi. Attendere 15 minuti.');
  $name=strtolower(trim($name));$account=null;
  if($name==='ghost'&&!empty($s['development'])&&!empty($s['ghost_enabled'])&&password_verify($password,$s['ghost_hash'])){
   $account=['kind'=>'ghost','version'=>hash('sha256',$s['ghost_hash'])];
@@ -80,11 +76,7 @@ function user_login(string $name,string $password): void {
   $valid=password_verify($password,$u['PasswordHash']??'$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2uheWG/igi.');
   if($valid&&$u&&(int)$u['Attivo']===1&&in_array($u['Ruolo'],['admin','user'],true))$account=['kind'=>'db','id'=>(int)$u['ID'],'version'=>(int)$u['VersioneSessione']];
  }
- if(!$account){
-  $q=$db->prepare('INSERT INTO AccessiTentativi (Chiave,Tentativi,Ultimo) VALUES (?,1,?) ON DUPLICATE KEY UPDATE Tentativi=IF(Ultimo < ?,1,Tentativi+1),Ultimo=?');
-  $q->execute([$rate,time(),time()-900,time()]);throw new RuntimeException('Credenziali non valide o account non attivo.');
- }
- $q=$db->prepare('DELETE FROM AccessiTentativi WHERE Chiave=?');$q->execute([$rate]);
+ if(!$account)throw new RuntimeException('Credenziali non valide o account non attivo.');
  session_regenerate_id(true);$_SESSION=['account'=>$account+['time'=>time()],'csrf'=>bin2hex(random_bytes(32))];
 }
 require_once __DIR__.'/layout.php';
