@@ -2,9 +2,9 @@
 
 ## Pagine e funzioni
 
-- `dashboard_anagrafica.php`: tre schede Enti, Referenti, Altri soggetti, collegate anche dal menu Anagrafiche. Le schede persone sono visibili a chi ha accesso sia ad associazioni sia a soggetti.
+- `dashboard_anagrafica.php`: due schede Enti e Altri soggetti, collegate anche dal menu Anagrafiche. La scheda Altri soggetti è visibile a chi ha accesso sia ad associazioni sia a soggetti.
 - `anagrafica_singola.php?id=...`: modifica denominazione, codice fiscale, tipologia e incarichi ETS; CRUD persone LR/AS; email/PEC e telefoni di enti e persone; predefinito unico per titolare; confronto RUNTS e importazione selettiva Cesvot.
-- `gestione_referenti.php` e `gestione_altri.php`: ricerca e paginazione degli archivi persone con email e ente. Le modifiche si eseguono nella scheda del relativo ente, evitando gestioni separate dello stesso dato. Per creare una persona, scegliere prima l'ente.
+- `gestione_altri.php`: ricerca e paginazione degli altri soggetti con email e ente. I legali rappresentanti (Soggetti.Tipo = LR) restano gestibili nella scheda del relativo ente. Le modifiche si eseguono nella scheda del relativo ente, evitando gestioni separate dello stesso dato. Per creare una persona, scegliere prima l'ente.
 
 Le pagine sono PHP con il layout comune Gestione. Stili e JavaScript sono locali, senza Tailwind, DaisyUI o vecchie API Node. Anche senza JavaScript i moduli funzionano con POST e redirect; con JavaScript i salvataggi indipendenti aggiornano le sezioni senza perdere una bozza nei dati principali. Uscendo con dati principali non salvati, il browser chiede conferma. In caso di errore di connessione verificare l'esito prima di ripetere.
 
@@ -14,7 +14,7 @@ Le pagine sono PHP con il layout comune Gestione. Stili e JavaScript sono locali
 |---|---|
 | dashboard_anagrafica.html, anagrafica_singola.html | Allegati analizzati |
 | anagrafica.html | Presente nello ZIP precedente; già convertito in anagrafica.php |
-| gestione_referenti.html, gestione_altri.html | Presenti in public.zip; collegate agli archivi PHP con modifica nella scheda ente |
+| gestione_referenti.html, gestione_altri.html | Presenti in public.zip; gli altri soggetti hanno un archivio PHP, i legali rappresentanti si gestiscono nella scheda ente |
 | assets/js/auth.js, assets/js/ui.js, assets/js/config.js | Presenti in public.zip; autenticazione e componenti sostituiti da quelli PHP comuni |
 | DaisyUI e Tailwind CDN | Sostituiti dagli stili locali, compatibili con la CSP attuale |
 | /api/tipologie, /api/associazioni, /api/referenti, /api/altri-soggetti, /api/mail, /api/telefono | Implementazione server originale non fornita. Funzioni ricostruite sulle tabelle attuali con moduli PHP |
@@ -59,8 +59,8 @@ Cesvot: confronto per denominazione esatta ignorando maiuscole e spazi esterni; 
 
 1. Fare il normale backup del database e dei file privati.
 2. `git pull --ff-only` sul PC.
-3. Caricare con WinSCP: anagrafica_singola.php, dashboard_anagrafica.php, gestione_referenti.php, gestione_altri.php, pannello.php; includes/layout.php, includes/anagrafica_scheda.php, includes/anagrafica_scheda_sezioni.php, includes/anagrafica_persone.php; assets/anagrafica_scheda.css e assets/anagrafica_scheda.js.
-4. Nessuna migrazione SQL. Non caricare tests o documentazione nel sito. Non eliminare o sovrascrivere private: disattivare l'eliminazione automatica WinSCP, soprattutto per security.php e dati_security.php.
+3. Caricare con WinSCP: anagrafica_singola.php, dashboard_anagrafica.php, gestione_altri.php, pannello.php; includes/layout.php, includes/anagrafica_scheda.php, includes/anagrafica_scheda_sezioni.php, includes/anagrafica_persone.php; assets/anagrafica_scheda.css e assets/anagrafica_scheda.js.
+4. Eliminare manualmente dal server il solo vecchio file `gestione_referenti.php`. Nessuna migrazione SQL. Non caricare tests o documentazione nel sito. Non eliminare o sovrascrivere private: disattivare l'eliminazione automatica WinSCP, soprattutto per security.php e dati_security.php.
 5. Aprire Anagrafiche > Gestione anagrafica oppure un ente dall'elenco. Se la migrazione della cifratura è ancora in corso, completarla dalla procedura esistente prima di usare le anagrafiche.
 
 ## Verifiche automatiche

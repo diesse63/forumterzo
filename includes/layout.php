@@ -27,7 +27,7 @@ function layout_start(string $title, string $description='', array $context=[]):
   $items[]=['label'=>'Pannello','url'=>'/pannello.php'];
   if(allowed($user,'associazioni')){
    $anagrafiche=[['label'=>'Gestione anagrafica','url'=>'/dashboard_anagrafica.php'],['label'=>'Enti','url'=>'/anagrafica.php']];
-   if(allowed($user,'soggetti')){$anagrafiche[]=['label'=>'Referenti','url'=>'/gestione_referenti.php'];$anagrafiche[]=['label'=>'Altri soggetti','url'=>'/gestione_altri.php'];}
+   if(allowed($user,'soggetti')){$anagrafiche[]=['label'=>'Altri soggetti','url'=>'/gestione_altri.php'];}
    $items[]=['label'=>'Anagrafiche','children'=>$anagrafiche];
   }
   $services=[];
