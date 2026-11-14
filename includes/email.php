@@ -166,6 +166,7 @@ function em_send_batch(PDO $p,int $id,?callable $bridge=null): array {
   if(!$limit)return ['sent'=>0,'notice'=>'Quota Gmail esaurita. Riprendere più tardi.'];
   $jobs=dc_rows($p,'email_invii',"WHERE MessaggioID=? AND Stato='da_inviare' ORDER BY DestinatarioID LIMIT ".$limit,[$id]);
   foreach($jobs as $row){
+   dc_active($p);
    $dest=dc_find($p,'email_destinatari',['ID'=>$row['DestinatarioID']]);$plainMessage=dc_find($p,'email_messaggi',['ID'=>$id]);
    $row=array_merge($plainMessage,$dest,$row);
    if(time()-$start>150){$notice='Tempo del lotto terminato: riprendere i rimanenti.';break;}

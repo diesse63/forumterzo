@@ -54,5 +54,5 @@ jobs:
         env:
           POIMANAGER_TEST: '1'
         run: |
-          php tests/cifratura.php
+          php -d disable_functions=sodium_crypto_secretbox,sodium_crypto_secretbox_open tests/cifratura.php
           node tests/cifratura.cjs

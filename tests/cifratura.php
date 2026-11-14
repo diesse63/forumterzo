@@ -58,6 +58,10 @@ try{
  cr_check($p->query('SELECT Tipologia FROM Tipologia WHERE ID=400')->fetchColumn()!=='TIPO NUOVO CIFRATO','Import in chiaro');
  $plan=table_plan($p,$s,$map,$order);cr_check($plan['Tipologia']['invariati']===2,'Reimport cifrato non idempotente');
 }finally{$s=null;@unlink($path);}
+$blindOriginal=$p->query('SELECT SOGGETTO FROM Associazioni WHERE ID='.$created)->fetchColumn();
+$p->prepare('UPDATE Associazioni SET SOGGETTO=? WHERE ID=?')->execute([str_repeat('0',64),$created]);
+$blocked=false;try{enti_detail($p,$created);}catch(RuntimeException $e){$blocked=true;}cr_check($blocked,'Indice HMAC alterato non rilevato');
+$p->prepare('UPDATE Associazioni SET SOGGETTO=? WHERE ID=?')->execute([$blindOriginal,$created]);
 $targetOriginal=$p->query('SELECT _Cifrato FROM Associazioni WHERE ID=1')->fetchColumn();
 $original=$p->query('SELECT _Cifrato FROM Associazioni WHERE ID='.$created)->fetchColumn();
 $p->prepare('UPDATE Associazioni SET _Cifrato=? WHERE ID=?')->execute([$original,1]);

@@ -50,6 +50,10 @@ function dc_open(string $table,array $row):array {
  foreach($spec['fields'] as $field){
   if(!array_key_exists($field,$data['values']??[]))throw new RuntimeException('Campo cifrato non valido.');
   $v=$data['values'][$field];$plain=$v===null?null:base64_decode($v,true);if($v!==null&&$plain===false)throw new RuntimeException('Valore cifrato non valido.');
+  if(in_array($field,$spec['indexed'],true)){
+   $expected=dc_index($table,$field,$plain);
+   if(($row[$field]===null)!==($expected===null)||($expected!==null&&!hash_equals((string)$expected,(string)$row[$field])))throw new RuntimeException('Indice riservato alterato: '.$table.'.'.$field);
+  }elseif($row[$field]!==null&&$row[$field]!=='')throw new RuntimeException('Valore testuale residuo non ammesso: '.$table.'.'.$field);
   $row[$field]=$plain;
  }
  unset($row['_Cifrato']);return $row;
