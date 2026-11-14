@@ -8,7 +8,7 @@ function sc_bad(callable $f,string $why):void{$bad=false;try{$f();}catch(Runtime
 $p=poimanager_db();$encrypted=dc_active($p);$tag=$encrypted?'CIFRATA':'NORMALE';
 $id=enti_create($p,['SOGGETTO'=>'SCHEDA TEST '.$tag,'ID_TIPOLOGIA'=>100,'CODICEFISCALE'=>'SC'.($encrypted?'ENC':'PLAIN')]);
 $other=enti_create($p,['SOGGETTO'=>'SCHEDA ESTERNA '.$tag,'ID_TIPOLOGIA'=>101]);
-$mutate=function(string $action,array $in=[])use($p,$id):void{scheda_mutate($p,$id,scheda_revision(enti_detail($p,$id)),$action,$in);};
+$mutate=function(string $action,array $in=[])use($p,$id):void{if($action==='runts_align'&&!isset($in['source_revision']))$in['source_revision']=scheda_runts_revision(enti_runts_record($p,(string)$in['runts_cf']));if($action==='cesvot_import'&&!isset($in['source_revision']))$in['source_revision']=hash('sha256',json_encode(scheda_cesvot($p,enti_detail($p,$id))[$in['table']],JSON_THROW_ON_ERROR));scheda_mutate($p,$id,scheda_revision(enti_detail($p,$id)),$action,$in);};
 $oldRevision=scheda_revision(enti_detail($p,$id));
 $mutate('entity_save',['SOGGETTO'=>'SCHEDA TEST '.$tag,'ID_TIPOLOGIA'=>101,'TAVOLO'=>'1','DIRETTIVO_DELEGAZIONE'=>'1']);
 sc_check((int)enti_detail($p,$id)['TAVOLO']===0,'Flag non ETS salvato');
@@ -36,6 +36,7 @@ sc_check(enti_detail($p,$id)['Persone'][0]['Nome']==='PERSONA AGGIORNATA '.$tag,
 $cf='SCRUNTS'.($encrypted?'E':'P');
 dc_insert($p,'Runts',['CodiceFiscale'=>$cf,'Denominazione'=>'DA RUNTS '.$tag,'Cognome'=>'PERSONA','Nome'=>'PROPOSTA '.$tag]);
 $beforeName=enti_detail($p,$id)['SOGGETTO'];
+sc_bad(fn()=>$mutate('runts_align',['runts_cf'=>$cf,'source_revision'=>'obsoleta']),'RUNTS modificato dopo anteprima accettato');
 sc_bad(fn()=>$mutate('runts_align',['runts_cf'=>$cf,'import_person'=>'1']),'Ruolo RUNTS implicito accettato');
 sc_check(enti_detail($p,$id)['SOGGETTO']===$beforeName,'Allineamento non atomico');
 $mutate('runts_align',['runts_cf'=>$cf,'import_person'=>'1','person_type'=>'AS']);
@@ -44,6 +45,7 @@ $mutate('runts_align',['runts_cf'=>$cf,'import_person'=>'1','person_type'=>'AS']
 $cm=(int)dc_insert($p,'CesvotMail',['Denominazione'=>'DA RUNTS '.$tag,'Mail'=>'cesvot.'.strtolower($tag).'@example.invalid']);
 $ct=(int)dc_insert($p,'CesvotTelefono',['Denominazione'=>'DA RUNTS '.$tag,'Telefono'=>'055 987654']);
 $foreignCm=(int)dc_insert($p,'CesvotMail',['Denominazione'=>'ALTRO ENTE','Mail'=>'altra@example.invalid']);
+sc_bad(fn()=>$mutate('cesvot_import',['table'=>'Mail','source_ids'=>[$cm],'source_revision'=>'obsoleta']),'Cesvot modificato dopo anteprima accettato');
 $candidates=scheda_cesvot($p,enti_detail($p,$id));sc_check(count($candidates['Mail'])===1&&count($candidates['Telefono'])===1,'Confronto Cesvot');
 sc_bad(fn()=>$mutate('cesvot_import',['table'=>'Mail','source_ids'=>[$foreignCm]]),'Cesvot estraneo ammesso');
 $mutate('cesvot_import',['table'=>'Mail','source_ids'=>[$cm]]);$mutate('cesvot_import',['table'=>'Telefono','source_ids'=>[$ct]]);

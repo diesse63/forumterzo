@@ -23,7 +23,7 @@
   const data=new FormData(form),main=form.id==='scheda-main-form';
   busy=true;const buttons=[...document.querySelectorAll('.scheda-form button')];buttons.forEach(b=>b.disabled=true);
   try{
-   const response=await fetch(form.action,{method:'POST',body:data,credentials:'same-origin'});
+   const response=await fetch(form.getAttribute('action'),{method:'POST',body:data,credentials:'same-origin'});
    const html=await response.text(),doc=new DOMParser().parseFromString(html,'text/html');
    if(new URL(response.url).pathname==='/login.php'){dirty=false;busy=false;location.assign('/login.php');return;}
    if(data.get('action')==='entity_delete'&&response.ok&&new URL(response.url).pathname==='/anagrafica.php'){dirty=false;busy=false;location.assign(response.url);return;}

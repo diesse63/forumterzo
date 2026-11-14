@@ -12,7 +12,7 @@ const {chromium}=require('playwright'),{spawn}=require('child_process');
   await page.getByRole('link',{name:/Elenco enti/}).click();
   await page.locator('input[name=q]').fill('SCHEDA BROWSER '+tag);await page.waitForFunction(()=>document.querySelector('.enti-count strong')?.textContent==='1');
   await page.locator('.enti-table .enti-open').click();await page.waitForURL('**/anagrafica_singola.php?*');const url=page.url();
-  const save=async form=>{await form.locator('button').last().click();await page.getByRole('status').filter({hasText:'Operazione salvata correttamente.'}).waitFor();};
+  const save=async form=>{await form.locator('button').last().click();await page.waitForFunction(()=>document.querySelector('#scheda-feedback [role=alert]')||document.querySelector('#scheda-feedback [role=status]')?.textContent.includes('Operazione salvata correttamente.'));check(!await page.locator('#scheda-feedback [role=alert]').count(),await page.locator('#scheda-feedback').textContent());};
   await page.locator('#scheda-main-form input[name=SOGGETTO]').fill('SCHEDA BROWSER '+tag+' MODIFICATA');
   let contact=page.locator('form[data-new-contact=Mail]');await contact.locator('input[name=value]').fill('browser.'+tag.toLowerCase()+'@example.invalid');await save(contact);
   check(await page.locator('#scheda-main-form input[name=SOGGETTO]').inputValue()==='SCHEDA BROWSER '+tag+' MODIFICATA','Bozza principale persa al salvataggio recapito');

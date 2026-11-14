@@ -2,6 +2,10 @@
 declare(strict_types=1);
 require_once __DIR__.'/anagrafica.php';
 function scheda_revision(array $entity):string {return hash('sha256',json_encode($entity,JSON_THROW_ON_ERROR));}
+function scheda_runts_revision(array $record):string {
+ $values=[];foreach(['CodiceFiscale','Denominazione','Cognome','Nome'] as $field)$values[$field]=$record[$field]??null;
+ return hash('sha256',json_encode($values,JSON_THROW_ON_ERROR));
+}
 function scheda_owner(PDO $p,int $entityId,string $owner):array {
  if($owner==='ente')return ['TipoSoggetto'=>'ASSOCIAZIONE','IDSoggetto'=>$entityId];
  if(!preg_match('/^persona:([1-9][0-9]*)$/D',$owner,$m))throw new RuntimeException('Destinatario del recapito non valido.');
@@ -106,6 +110,7 @@ function scheda_mutate(PDO $p,int $id,string $revision,string $action,array $in)
    $q=$p->prepare('DELETE FROM Associazioni WHERE ID=?');$q->execute([$id]);
   }elseif($action==='runts_align'){
    $cf=(string)($in['runts_cf']??'');$r=enti_runts_record($p,$cf);if(!$r||trim((string)$r['Denominazione'])==='')throw new RuntimeException('Record RUNTS non disponibile.');
+   if(!hash_equals(scheda_runts_revision($r),(string)($in['source_revision']??'')))throw new RuntimeException('Record RUNTS modificato: ricaricare il confronto prima di confermare.');
    $change=['SOGGETTO'=>$r['Denominazione'],'CODICEFISCALE'=>$r['CodiceFiscale'],'ID_TIPOLOGIA'=>$entity['ID_TIPOLOGIA']];
    foreach(['TAVOLO','DIRETTIVO_DELEGAZIONE'] as $flag)if((int)$entity[$flag])$change[$flag]='1';
    scheda_entity_save($p,$id,$change);
@@ -118,6 +123,7 @@ function scheda_mutate(PDO $p,int $id,string $revision,string $action,array $in)
    $table=(string)($in['table']??'');if(!in_array($table,['Mail','Telefono'],true))throw new RuntimeException('Tipo Cesvot non valido.');
    $ids=$in['source_ids']??[];if(!is_array($ids)||!$ids||count($ids)>200)throw new RuntimeException('Selezionare da 1 a 200 recapiti Cesvot.');
    $ids=array_values(array_unique(array_map('intval',$ids)));$available=scheda_cesvot($p,$entity)[$table];$selected=[];
+   if(!hash_equals(hash('sha256',json_encode($available,JSON_THROW_ON_ERROR)),(string)($in['source_revision']??'')))throw new RuntimeException('Proposte Cesvot modificate: ricaricare prima di importare.');
    foreach($available as $r)if(in_array($r['ID'],$ids,true))$selected[]=$r;
    if(count($selected)!==count($ids))throw new RuntimeException('Recapiti Cesvot cambiati o non appartenenti a questo ente: ricaricare.');
    foreach($selected as $r)scheda_contact_save($p,$id,$table,['owner'=>'ente','value'=>$r['value']]);

@@ -28,7 +28,7 @@ Si utilizzano Associazioni, Tipologia, Soggetti, Mail, Telefono, Runts, CesvotMa
 
 Nessuna modifica strutturale: contratto cifratura e mappa SQLite v4 restano validi. I campi riservati passano dalle funzioni dc_*; le query dirette operano su ID, collegamenti, indicatori o cancellazioni. La scheda si blocca durante la migrazione e se manca la chiave dei dati. Nessuna chiave viene generata o modificata da queste pagine.
 
-Ogni salvataggio usa una transazione con blocco della riga ente e verifica della revisione dell'intera scheda. Una scheda obsoleta viene rifiutata. Non è possibile modificare persone/recapiti di altri enti passando un ID estraneo. Il titolare di un recapito esistente non si può cambiare; creare un nuovo recapito sul titolare corretto.
+Ogni salvataggio usa una transazione con blocco della riga ente e verifica della revisione dell'intera scheda. Una scheda obsoleta viene rifiutata. Anche le proposte RUNTS/Cesvot hanno un'impronta verificata al salvataggio: cambiamenti del sorgente richiedono un nuovo confronto. Non è possibile modificare persone/recapiti di altri enti passando un ID estraneo. Il titolare di un recapito esistente non si può cambiare; creare un nuovo recapito sul titolare corretto.
 
 Eliminare una persona rimuove i suoi recapiti e le relative iscrizioni alle liste; eliminare un ente rimuove persone e recapiti soltanto se non ci sono vincoli che lo impediscono. Gli errori annullano l'intera operazione.
 
