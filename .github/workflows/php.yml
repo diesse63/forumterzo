@@ -33,6 +33,7 @@ jobs:
           php tests/check_schema.php
           php tests/anagrafica.php
           php tests/email.php
+          php tests/email_diagnostica.php
           php tests/ghost.php
       - name: Compatibilità cifratura e HTTPS senza Sodium e cURL
         run: |

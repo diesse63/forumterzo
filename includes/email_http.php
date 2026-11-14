@@ -53,8 +53,17 @@ function em_bridge_call(array $config,string $secret,array $payload,?callable $h
   $response=$http($response['location'],'GET','');
  }
  if($response['code']!==200)throw new RuntimeException('Il ponte Google non risponde correttamente. Verificare deployment pubblico, autorizzazioni e whitelist.');
- $envelope=json_decode($response['body'],true);
- if(!is_array($envelope)||!is_string($envelope['data']??null)||!is_string($envelope['signature']??null)||!hash_equals(hash_hmac('sha256',$envelope['data'],$secret),$envelope['signature']))throw new RuntimeException('Risposta del ponte non autenticata. Verificare la credenziale segreta e il deployment.');
+ $envelope=json_decode(preg_replace('/^\\xEF\\xBB\\xBF/','',$response['body']),true);
+ if(!is_array($envelope)){
+  $plain=trim($response['body']);
+  if(str_contains($plain,'Ponte non configurato'))throw new RuntimeException('Il progetto Google risponde, ma BRIDGE_SECRET è assente o non contiene esattamente 64 caratteri esadecimali minuscoli. Verificare Proprietà script nel progetto del deployment.');
+  if(str_contains($plain,'Ponte Gestione email:'))throw new RuntimeException('Il ponte ha ricevuto una richiesta GET anziché il POST firmato. Verificare il trasporto e l’URL /exec.');
+  if(preg_match('/<\\s*(?:!doctype|html|head|body)/i',$plain))throw new RuntimeException('Google ha restituito una pagina HTML, non la risposta del ponte. Verificare Esegui come Me, accesso Chiunque, autorizzaPonte e deployment aggiornato del progetto corretto.');
+  throw new RuntimeException('Risposta Google non JSON: il deployment non sta eseguendo il ponte previsto. Verificare URL /exec e versione distribuita.');
+ }
+ if(!is_string($envelope['data']??null)||!is_string($envelope['signature']??null))throw new RuntimeException('Il deployment restituisce JSON con un formato diverso dal ponte Gestione email. Aggiornare Codice.gs e distribuire una Nuova versione.');
+ if(!preg_match('/^[a-f0-9]{64}$/D',$envelope['signature'])||!hash_equals(hash_hmac('sha256',$envelope['data'],$secret),$envelope['signature']))throw new RuntimeException('Il ponte restituisce JSON ma la firma non coincide: la credenziale salvata su Altervista è diversa da BRIDGE_SECRET del progetto Google, oppure l’URL punta a un altro progetto. Confrontare le impronte della credenziale, senza divulgarne il valore.');
+
  $raw=base64_decode($envelope['data'],true);$result=$raw===false?null:json_decode($raw,true);
  if(!is_array($result)||($result['nonce']??'')!==$nonce)throw new RuntimeException('Risposta del ponte non corrispondente alla richiesta.');
  if(empty($result['ok']))throw new RuntimeException('Il ponte ha rifiutato la richiesta: '.substr((string)($result['error']??'errore'),0,180));

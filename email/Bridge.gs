@@ -11,7 +11,11 @@ function bridgeOutput_(result,secret) {
  var data=Utilities.base64Encode(JSON.stringify(result),Utilities.Charset.UTF_8);
  return ContentService.createTextOutput(JSON.stringify({data:data,signature:bridgeSign_(data,secret)})).setMimeType(ContentService.MimeType.JSON);
 }
+function bridgeFingerprint_(secret) { return bridgeHex_(Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256,secret,Utilities.Charset.UTF_8)).slice(0,16); }
 function autorizzaPonte() {
+ var secret=PropertiesService.getScriptProperties().getProperty('BRIDGE_SECRET')||'';
+ if(!/^[a-f0-9]{64}$/.test(secret))throw new Error('BRIDGE_SECRET mancante o non valida: occorrono 64 caratteri esadecimali minuscoli.');
+ console.log('Impronta credenziale (non è il segreto): '+bridgeFingerprint_(secret));
  var owner=Session.getEffectiveUser().getEmail();
  if(!owner)throw new Error('Account Google non identificabile.');
  console.log('Account: '+owner+'; quota destinatari: '+MailApp.getRemainingDailyQuota());

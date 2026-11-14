@@ -13,6 +13,7 @@
 <p class="email-muted">Copia la nuova credenziale nella proprietà script BRIDGE_SECRET. Non è la password Gmail. Le credenziali già salvate non vengono mostrate. Cambiando account usare un nuovo progetto/deployment e una nuova versione qui.</p><button>Salva nuova versione configurazione</button></form></section>
 <?php if($config):?>
 <section class="email-card"><h2>Prove della configurazione attiva</h2>
+<p>Impronta della credenziale salvata: <strong><?=em_h(substr(hash('sha256',em_secret($config)),0,16))?></strong>. Deve coincidere con l’impronta mostrata nel registro Google eseguendo autorizzaPonte. L’impronta non è la credenziale e non va inserita in BRIDGE_SECRET.</p>
 <form method="post"><input type="hidden" name="csrf" value="<?=em_h(csrf())?>"><input type="hidden" name="action" value="ping"><button>Test connessione — nessuna email</button></form>
 <p>Ultima verifica: <?=em_h($config['VerificataIl']??'mai')?> UTC</p>
 <form method="post"><input type="hidden" name="csrf" value="<?=em_h(csrf())?>"><input type="hidden" name="action" value="testmail"><input type="hidden" name="send_nonce" value="<?=em_h(em_send_nonce())?>"><label><input type="checkbox" name="confirm" required> Autorizzo una singola email di prova a <?=em_h($config['EmailTest'])?>.</label><button <?=$config['VerificataIl']?'':'disabled'?>>Invia email di prova</button></form></section>
