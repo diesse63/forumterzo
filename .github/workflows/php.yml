@@ -50,3 +50,9 @@ jobs:
           node tests/anagrafica.cjs
           node tests/bridge.cjs
           node tests/email.cjs
+      - name: Migrazione e regressioni cifratura dati reali simulati
+        env:
+          POIMANAGER_TEST: '1'
+        run: |
+          php tests/cifratura.php
+          node tests/cifratura.cjs

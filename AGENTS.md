@@ -12,3 +12,7 @@ Leggere e rispettare LAYOUT.md per ogni nuova pagina o modifica dell'interfaccia
 - Aggiornare sempre il repository GitHub con le modifiche al codice.
 
 - Ogni nuova voce/pannello: admin ha tutti i poteri automaticamente; user nessun permesso fino ad assegnazione esplicita. Nessuna concessione automatica ai nuovi pannelli.
+
+- Dopo l'attivazione della cifratura, tutte le letture/scritture di campi riservati passano da includes/dati.php (dc_rows/dc_find/dc_insert/dc_update). Vietato usare SQL diretto sui campi testuali cifrati come se fossero dati leggibili.
+- Rispettare schema/cifratura_v1.json e CIFRATURA_DATI.md; ogni modifica strutturale aggiorna il contratto, la migrazione e la mappatura SQLite v4. Non creare nuove copie testuali o indici di ricerca non approvati.
+- Chiavi solo in private, mai in Git, log o risposte utente. Non modificare chiavi utenti/token email per migrare i dati gestionali.

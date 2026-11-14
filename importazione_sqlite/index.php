@@ -23,12 +23,12 @@ try{
    chmod($path,0600);
    try{$s=table_source($path);$inventory=table_inventory($s,$map);$s=null;}
    catch(Throwable $e){@unlink($path);throw $e;}
-   $_SESSION['upload']=['path'=>$path,'sha256'=>hash_file('sha256',$path),'map'=>hash_file('sha256',__DIR__.'/mappa_v3.json'),'time'=>time(),'inventory'=>$inventory];
+   $_SESSION['upload']=['path'=>$path,'sha256'=>hash_file('sha256',$path),'map'=>hash_file('sha256',__DIR__.'/mappa_v4.json'),'time'=>time(),'inventory'=>$inventory];
    $message='File letto. Selezionare le tabelle da aggiornare. Nessun dato importato.';
   }elseif(in_array($action,['preview','import'],true)){
    $u=$_SESSION['upload']??null;
    if(!$u||!isset($u['inventory'])||time()-$u['time']>1800||!is_file($u['path']))throw new RuntimeException('File assente o scaduto: caricarlo nuovamente.');
-   if(!hash_equals($u['sha256'],hash_file('sha256',$u['path']))||!hash_equals($u['map'],hash_file('sha256',__DIR__.'/mappa_v3.json')))throw new RuntimeException('File o mappa cambiati: ripetere il caricamento.');
+   if(!hash_equals($u['sha256'],hash_file('sha256',$u['path']))||!hash_equals($u['map'],hash_file('sha256',__DIR__.'/mappa_v4.json')))throw new RuntimeException('File o mappa cambiati: ripetere il caricamento.');
    import_private_dir($cfg['private_dir']);$s=table_source($u['path']);$p=db($cfg);
    if($action==='preview'){
     unset($_SESSION['upload']['plan']);$selected=$_POST['tables']??[];

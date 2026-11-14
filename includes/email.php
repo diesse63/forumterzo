@@ -2,6 +2,7 @@
 declare(strict_types=1);
 require_once __DIR__.'/database.php';
 require_once __DIR__.'/email_http.php';
+require_once __DIR__.'/dati.php';
 function em_h($value): string {return htmlspecialchars((string)$value,ENT_QUOTES|ENT_SUBSTITUTE,'UTF-8');}
 function em_ready(PDO $p): bool {
  $q=$p->query("SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME IN ('email_configurazione','email_messaggi','email_destinatari','email_invii')");
@@ -15,6 +16,17 @@ function em_install(PDO $p): void {
   $q=$p->prepare('SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=?');$q->execute([$table]);
   if(array_diff($required,$q->fetchAll(PDO::FETCH_COLUMN)))throw new RuntimeException('Struttura delle nuove tabelle email non compatibile: '.$table);
  }
+ if(dc_active($p)){
+  require_once __DIR__.'/dati_migrazione.php';
+  foreach(['email_configurazione','email_messaggi','email_destinatari','email_invii'] as $t){
+   if(!isset(dc_columns($p,$t,true)['_Cifrato'])){
+    if((int)$p->query('SELECT COUNT(*) FROM '.dc_q($t))->fetchColumn()!==0)throw new RuntimeException('Nuova tabella email con dati non cifrati: richiede migrazione controllata.');
+    dc_prepare_table($p,$t);
+    $q=$p->prepare("INSERT IGNORE INTO crypto_tabelle (Nome,Stato,Righe,Convertite) VALUES (?,'pronto',0,0)");$q->execute([$t]);
+   }
+  }
+ }
+
 }
 function em_admin(array $u): bool{return in_array($u['Ruolo'],['admin','ghost'],true);}
 function em_secret_path(string $ref): string {
@@ -30,8 +42,8 @@ function em_secret(array $config): string {
  return $secret;
 }
 function em_config(PDO $p,?int $id=null): ?array {
- $q=$p->prepare($id===null?'SELECT * FROM email_configurazione WHERE Attiva=1 ORDER BY ID DESC LIMIT 1':'SELECT * FROM email_configurazione WHERE ID=?');
- $q->execute($id===null?[]:[$id]);$r=$q->fetch(PDO::FETCH_ASSOC);return $r===false?null:$r;
+ if($id!==null)return dc_find($p,'email_configurazione',['ID'=>$id]);
+ $rows=dc_rows($p,'email_configurazione','WHERE Attiva=1 ORDER BY ID DESC LIMIT 1');return $rows[0]??null;
 }
 function em_save_config(PDO $p,array $in): int {
  $url=trim((string)($in['url']??''));em_bridge_url($url);
@@ -52,8 +64,7 @@ function em_save_config(PDO $p,array $in): int {
  @chmod($file,0600);
  try{
   $p->beginTransaction();$p->exec('UPDATE email_configurazione SET Attiva=0 WHERE Attiva=1');
-  $q=$p->prepare('INSERT INTO email_configurazione (URLPonte,Mittente,NomeMittente,Modalita,EmailTest,Lotto,SegretoRef) VALUES (?,?,?,?,?,?,?)');
-  $q->execute([$url,$sender,$name,$mode,$test,$batch,$ref]);$id=(int)$p->lastInsertId();$p->commit();return $id;
+  $id=(int)dc_insert($p,'email_configurazione',['URLPonte'=>$url,'Mittente'=>$sender,'NomeMittente'=>$name,'Modalita'=>$mode,'EmailTest'=>$test,'Lotto'=>$batch,'SegretoRef'=>$ref]);$p->commit();return $id;
  }catch(Throwable $e){if($p->inTransaction())$p->rollBack();@unlink($file);throw $e;}
 }
 function em_ping(PDO $p,array $config,?callable $bridge=null): array {
@@ -62,6 +73,7 @@ function em_ping(PDO $p,array $config,?callable $bridge=null): array {
  $q=$p->prepare('UPDATE email_configurazione SET VerificataIl=UTC_TIMESTAMP() WHERE ID=?');$q->execute([$config['ID']]);return $r;
 }
 function em_contacts(PDO $p,string $search='',int $type=0,int $list=0): array {
+ if(dc_active($p))return em_encrypted_contacts($p,$search,$type,$list);
  $where=[];$args=[];
  if($search!==''){
   $like='%'.str_replace(['=','%','_'],['==','=%','=_'],$search).'%';
@@ -109,13 +121,12 @@ function em_save_draft(PDO $p,array $in): int {
  $id=(int)($in['id']??0);$p->beginTransaction();
  try{
   if($id){
-   $q=$p->prepare('SELECT * FROM email_messaggi WHERE ID=? FOR UPDATE');$q->execute([$id]);$old=$q->fetch();
+   $old=dc_find($p,'email_messaggi',['ID'=>$id],true);
    if(!$old||$old['Stato']!=='bozza'||(int)$old['Versione']!==(int)($in['version']??0))throw new RuntimeException('Bozza già preparata o modificata in un’altra scheda.');
-   $q=$p->prepare('UPDATE email_messaggi SET Oggetto=?,HTML=?,Testo=?,Versione=Versione+1 WHERE ID=?');$q->execute([$subject,$html,$text,$id]);
+   dc_update($p,'email_messaggi',['ID'=>$id],['Oggetto'=>$subject,'HTML'=>$html,'Testo'=>$text,'Versione'=>(int)$old['Versione']+1]);
    $q=$p->prepare('DELETE FROM email_destinatari WHERE MessaggioID=?');$q->execute([$id]);
-  }else{$q=$p->prepare('INSERT INTO email_messaggi (Oggetto,HTML,Testo) VALUES (?,?,?)');$q->execute([$subject,$html,$text]);$id=(int)$p->lastInsertId();}
-  $q=$p->prepare('INSERT INTO email_destinatari (MessaggioID,MailOrigineID,Nome,Email,Tipo,Ente) VALUES (?,?,?,?,?,?)');
-  foreach($selected as $email=>$c)$q->execute([$id,$c['ID'],$c['Nome'],$email,$c['TipoSoggetto'],$c['Ente']]);
+  }else{$id=(int)dc_insert($p,'email_messaggi',['Oggetto'=>$subject,'HTML'=>$html,'Testo'=>$text]);}
+  foreach($selected as $email=>$c)dc_insert($p,'email_destinatari',['MessaggioID'=>$id,'MailOrigineID'=>$c['ID'],'Nome'=>$c['Nome'],'Email'=>$email,'Tipo'=>$c['TipoSoggetto'],'Ente'=>$c['Ente']]);
   $p->commit();return $id;
  }catch(Throwable $e){if($p->inTransaction())$p->rollBack();throw $e;}
 }
@@ -132,10 +143,9 @@ function em_prepare(PDO $p,int $id): int {
   $q=$p->prepare('SELECT * FROM email_messaggi WHERE ID=? FOR UPDATE');$q->execute([$id]);$m=$q->fetch();
   if(!$m)throw new RuntimeException('Messaggio non trovato.');
   if($m['Stato']==='preparato'){$q=$p->prepare('SELECT COUNT(*) FROM email_invii WHERE MessaggioID=?');$q->execute([$id]);$count=(int)$q->fetchColumn();$p->commit();return $count;}
-  $q=$p->prepare('SELECT * FROM email_destinatari WHERE MessaggioID=? ORDER BY ID');$q->execute([$id]);$dest=$q->fetchAll();
+  $dest=dc_rows($p,'email_destinatari','WHERE MessaggioID=? ORDER BY ID',[$id]);
   if(!$dest)throw new RuntimeException('Bozza senza destinatari.');
-  $insert=$p->prepare('INSERT INTO email_invii (ID,MessaggioID,DestinatarioID,EmailEffettiva,CodiceHash,ScadeIl) VALUES (?,?,?,?,?,DATE_ADD(UTC_TIMESTAMP(),INTERVAL 365 DAY))');
-  foreach($dest as $d){$job=bin2hex(random_bytes(16));$to=$config['Modalita']==='test'?$config['EmailTest']:$d['Email'];$insert->execute([$job,$id,$d['ID'],$to,hash('sha256',em_token($job))]);}
+  foreach($dest as $d){$job=bin2hex(random_bytes(16));$to=$config['Modalita']==='test'?$config['EmailTest']:$d['Email'];dc_insert($p,'email_invii',['ID'=>$job,'MessaggioID'=>$id,'DestinatarioID'=>$d['ID'],'EmailEffettiva'=>$to,'CodiceHash'=>hash('sha256',em_token($job)),'ScadeIl'=>gmdate('Y-m-d H:i:s',time()+365*86400)]);}
   $q=$p->prepare("UPDATE email_messaggi SET Stato='preparato',ConfigID=?,Versione=Versione+1 WHERE ID=?");$q->execute([$config['ID'],$id]);$p->commit();return count($dest);
  }catch(Throwable $e){if($p->inTransaction())$p->rollBack();throw $e;}
 }
@@ -154,9 +164,10 @@ function em_send_batch(PDO $p,int $id,?callable $bridge=null): array {
   $ping=$bridge($config,$secret,['op'=>'ping']);if(empty($ping['ok'])||strtolower($ping['sender']??'')!==strtolower($config['Mittente']))throw new RuntimeException('Il mittente del ponte non corrisponde alla campagna.');
   $limit=min((int)$config['Lotto'],max(0,(int)($ping['quota']??0)));
   if(!$limit)return ['sent'=>0,'notice'=>'Quota Gmail esaurita. Riprendere più tardi.'];
-  $q=$p->prepare("SELECT i.*,d.Nome,d.Email,m.Oggetto,m.HTML,m.Testo FROM email_invii i JOIN email_destinatari d ON d.ID=i.DestinatarioID JOIN email_messaggi m ON m.ID=i.MessaggioID WHERE i.MessaggioID=? AND i.Stato='da_inviare' ORDER BY d.ID LIMIT ".$limit);
-  $q->execute([$id]);$jobs=$q->fetchAll();
+  $jobs=dc_rows($p,'email_invii',"WHERE MessaggioID=? AND Stato='da_inviare' ORDER BY DestinatarioID LIMIT ".$limit,[$id]);
   foreach($jobs as $row){
+   $dest=dc_find($p,'email_destinatari',['ID'=>$row['DestinatarioID']]);$plainMessage=dc_find($p,'email_messaggi',['ID'=>$id]);
+   $row=array_merge($plainMessage,$dest,$row);
    if(time()-$start>150){$notice='Tempo del lotto terminato: riprendere i rimanenti.';break;}
    $claim=$p->prepare("UPDATE email_invii SET Stato='in_corso',IniziatoIl=UTC_TIMESTAMP() WHERE ID=? AND Stato='da_inviare'");$claim->execute([$row['ID']]);if(!$claim->rowCount())continue;
    try{
@@ -190,12 +201,13 @@ function em_test_message(PDO $p,array $c): int {
  if(!$c['VerificataIl'])throw new RuntimeException('Eseguire prima il test connessione.');
  $p->beginTransaction();
  try{
-  $q=$p->prepare("INSERT INTO email_messaggi (Oggetto,HTML,Testo,Stato,ConfigID) VALUES ('PROVA CONFIGURAZIONE GESTIONE EMAIL','<p>Messaggio di prova della configurazione. Nessun destinatario delle anagrafiche è coinvolto.</p>','Messaggio di prova della configurazione. Nessun destinatario delle anagrafiche è coinvolto.','preparato',?)");$q->execute([$c['ID']]);$id=(int)$p->lastInsertId();
-  $q=$p->prepare("INSERT INTO email_destinatari (MessaggioID,Nome,Email,Tipo,Ente) VALUES (?,'Destinatario di prova',?,'TEST','')");$q->execute([$id,$c['EmailTest']]);$dest=(int)$p->lastInsertId();$job=bin2hex(random_bytes(16));
-  $q=$p->prepare('INSERT INTO email_invii (ID,MessaggioID,DestinatarioID,EmailEffettiva,CodiceHash,ScadeIl) VALUES (?,?,?,?,?,DATE_ADD(UTC_TIMESTAMP(),INTERVAL 365 DAY))');$q->execute([$job,$id,$dest,$c['EmailTest'],hash('sha256',em_token($job))]);$p->commit();return $id;
+  $text='Messaggio di prova della configurazione. Nessun destinatario delle anagrafiche è coinvolto.';
+  $id=(int)dc_insert($p,'email_messaggi',['Oggetto'=>'PROVA CONFIGURAZIONE GESTIONE EMAIL','HTML'=>'<p>'.$text.'</p>','Testo'=>$text,'Stato'=>'preparato','ConfigID'=>$c['ID']]);
+  $dest=(int)dc_insert($p,'email_destinatari',['MessaggioID'=>$id,'Nome'=>'Destinatario di prova','Email'=>$c['EmailTest'],'Tipo'=>'TEST','Ente'=>'']);$job=bin2hex(random_bytes(16));
+  dc_insert($p,'email_invii',['ID'=>$job,'MessaggioID'=>$id,'DestinatarioID'=>$dest,'EmailEffettiva'=>$c['EmailTest'],'CodiceHash'=>hash('sha256',em_token($job)),'ScadeIl'=>gmdate('Y-m-d H:i:s',time()+365*86400)]);
+  $p->commit();return $id;
  }catch(Throwable $e){if($p->inTransaction())$p->rollBack();throw $e;}
 }
-
 function em_send_nonce(): string {
  $nonce=bin2hex(random_bytes(16));$_SESSION['email_send_nonces'][$nonce]=time();
  if(count($_SESSION['email_send_nonces'])>200)$_SESSION['email_send_nonces']=array_slice($_SESSION['email_send_nonces'],-100,null,true);
@@ -205,4 +217,28 @@ function em_consume_send_nonce(string $nonce): void {
  $time=$_SESSION['email_send_nonces'][$nonce]??0;
  unset($_SESSION['email_send_nonces'][$nonce]);
  if(!$time||time()-$time>1800)throw new RuntimeException('Richiesta già elaborata o scaduta. Ricaricare il registro prima di inviare.');
+}
+
+function em_encrypted_contacts(PDO $p,string $search,int $type,int $list):array {
+ $entities=[];foreach(dc_iter($p,'Associazioni') as $r)$entities[$r['ID']]=$r;
+ $people=[];foreach(dc_iter($p,'Soggetti') as $r)$people[$r['ID']]=$r;
+ $members=[];
+ if($list>0){$q=$p->prepare('SELECT IDMail FROM ListaMail WHERE IDListaMail=?');$q->execute([$list]);$members=array_fill_keys($q->fetchAll(PDO::FETCH_COLUMN),true);}
+ $rows=[];
+ foreach(dc_iter($p,'Mail') as $m){
+  if($list>0&&!isset($members[$m['ID']]))continue;
+  $person=null;$entity=null;
+  if($m['TipoSoggetto']==='ASSOCIAZIONE')$entity=$entities[$m['IDSoggetto']]??null;
+  else{$person=$people[$m['IDSoggetto']]??null;if($person&&(($m['TipoSoggetto']==='REFERENTE'&&$person['Tipo']==='LR')||($m['TipoSoggetto']==='ALTRO'&&$person['Tipo']==='AS')))$entity=$entities[$person['ID_Associazione']]??null;else $person=null;}
+  if($type>0&&(int)($entity['ID_TIPOLOGIA']??0)!==$type)continue;
+  $r=['ID'=>$m['ID'],'Indirizzo'=>$m['Indirizzo'],'PEC'=>$m['PEC'],'TipoSoggetto'=>$m['TipoSoggetto'],'Nome'=>$person['Nome']??$entity['SOGGETTO']??'Nominativo non collegato','Ente'=>$entity['SOGGETTO']??'','EnteID'=>$entity['ID']??null,'ID_TIPOLOGIA'=>$entity['ID_TIPOLOGIA']??null];
+  if($search!==''&&!dc_contains($r['Nome'].' '.$r['Ente'].' '.$r['Indirizzo'],$search))continue;
+  $rows[]=$r;
+ }
+ usort($rows,fn($a,$b)=>(int)$a['ID']<=>(int)$b['ID']);return $rows;
+}
+function em_campaigns(PDO $p):array {return dc_rows($p,'email_messaggi','ORDER BY ID DESC LIMIT 100');}
+function em_logs(PDO $p,int $id=0):array {
+ $rows=dc_rows($p,'email_invii',($id?'WHERE MessaggioID=? ':'').'ORDER BY IniziatoIl DESC,ID LIMIT 500',$id?[$id]:[]);
+ foreach($rows as &$r){$d=dc_find($p,'email_destinatari',['ID'=>$r['DestinatarioID']]);$m=dc_find($p,'email_messaggi',['ID'=>$r['MessaggioID']]);$r['Nome']=$d['Nome'];$r['Email']=$d['Email'];$r['Oggetto']=$m['Oggetto'];}unset($r);return $rows;
 }

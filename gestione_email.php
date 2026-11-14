@@ -7,6 +7,7 @@ $write=allowed($user,'gestione_email','scrittura');$admin=em_admin($user);
 $tab=(string)($_GET['tab']??'componi');if(!in_array($tab,['componi','registro','config'],true))$tab='componi';
 if($tab==='config'&&!$admin){http_response_code(403);exit('Configurazione riservata agli amministratori.');}
 $message=$_SESSION['email_flash']??'';unset($_SESSION['email_flash']);$id=(int)($_GET['id']??$_POST['id']??0);$p=poimanager_db();
+try{dc_active($p);}catch(RuntimeException $maintenance){page_start('Gestione email','Servizio temporaneamente in manutenzione.',['Servizi','Gestione email']);echo '<aside>'.em_h($maintenance->getMessage()).'</aside></main></body></html>';exit;}
 if(!em_ready($p)){
  page_start('Gestione email','Messaggi, destinatari e conferme in un archivio dedicato.',['Servizi','Gestione email']);
  echo '<aside>Il modulo email non è ancora installato.</aside>';
@@ -44,18 +45,15 @@ try{
 }catch(Throwable $e){
  $message=$e instanceof PDOException?'Operazione email non completata. Verificare le tabelle dedicate e riprovare senza duplicare invii con esito incerto.':$e->getMessage();
 }
-$config=em_config($p);$draft=null;$dest=[];$logs=[];$campaigns=$p->query('SELECT * FROM email_messaggi ORDER BY ID DESC LIMIT 100')->fetchAll();
-if($id){$q=$p->prepare('SELECT * FROM email_messaggi WHERE ID=?');$q->execute([$id]);$draft=$q->fetch()?:null;
- $q=$p->prepare('SELECT * FROM email_destinatari WHERE MessaggioID=? ORDER BY ID');$q->execute([$id]);$dest=$q->fetchAll();}
+$config=em_config($p);$draft=null;$dest=[];$logs=[];$campaigns=em_campaigns($p);
+if($id){$draft=dc_find($p,'email_messaggi',['ID'=>$id]);$dest=dc_rows($p,'email_destinatari','WHERE MessaggioID=? ORDER BY ID',[$id]);}
 $frozen=$draft&&$draft['Stato']==='preparato';$editable=$write&&!$frozen;
 $contacts=$tab==='componi'?em_contacts($p):[];$selected=array_map('intval',array_column($dest,'MailOrigineID'));
-$tipi=$tab==='componi'?$p->query('SELECT * FROM Tipologia ORDER BY Tipologia')->fetchAll():[];
-$lists=$tab==='componi'?$p->query('SELECT * FROM MailList ORDER BY Descrizione')->fetchAll():[];
+$tipi=$tab==='componi'?dc_rows($p,'Tipologia'):[];usort($tipi,fn($a,$b)=>strnatcasecmp($a['Tipologia'],$b['Tipologia']));
+$lists=$tab==='componi'?dc_rows($p,'MailList'):[];usort($lists,fn($a,$b)=>strnatcasecmp($a['Descrizione'],$b['Descrizione']));
 $membership=[];if($tab==='componi')foreach($p->query('SELECT IDMail,IDListaMail FROM ListaMail') as $row)$membership[$row['IDMail']][]=(int)$row['IDListaMail'];
-if($tab==='registro'){
- $sql='SELECT i.*,d.Nome,d.Email,m.Oggetto FROM email_invii i JOIN email_destinatari d ON d.ID=i.DestinatarioID JOIN email_messaggi m ON m.ID=i.MessaggioID';
- $q=$p->prepare($sql.($id?' WHERE i.MessaggioID=?':'').' ORDER BY i.IniziatoIl DESC,i.ID LIMIT 500');$q->execute($id?[$id]:[]);$logs=$q->fetchAll();
-}
+if($tab==='registro')$logs=em_logs($p,$id);
+
 page_start('Gestione email','Seleziona nominativi, prepara messaggi personali e consulta invii e conferme.',['Servizi','Gestione email']);
 ?>
 <link rel="stylesheet" href="/assets/email.css">

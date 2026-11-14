@@ -1,6 +1,7 @@
 <?php
 declare(strict_types=1);
 require_once dirname(__DIR__).'/includes/database.php';
+require_once dirname(__DIR__).'/includes/dati.php';
 function qi(string $s): string { return '`'.str_replace('`','``',$s).'`'; }
 function mapping(): array { return json_decode(file_get_contents(__DIR__.'/mappa_v2.json'),true,512,JSON_THROW_ON_ERROR); }
 function db(array $cfg): PDO {
@@ -58,19 +59,24 @@ function source(string $file,array $map): PDO {
  return $s;
 }
 function inspectTarget(PDO $p,array $map,bool $requireEmpty=true): void {
+ $encrypted=dc_active($p);
  foreach($map['tables'] as $t=>$spec) {
   $tr=$p->prepare('SELECT COUNT(*) FROM information_schema.TRIGGERS WHERE TRIGGER_SCHEMA=DATABASE() AND EVENT_OBJECT_TABLE=?');$tr->execute([$t]);
   if((int)$tr->fetchColumn()>0)throw new RuntimeException('Trigger inattesi nella destinazione: '.$t);
   $st=$p->prepare('SELECT ENGINE FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=?');$st->execute([$t]);
   if ($st->fetchColumn()!=='InnoDB') throw new RuntimeException('Tabella assente o non InnoDB: '.$t);
   $st=$p->prepare('SELECT COLUMN_NAME,COLUMN_TYPE,IS_NULLABLE,COLUMN_DEFAULT,EXTRA,COLLATION_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=? ORDER BY ORDINAL_POSITION');$st->execute([$t]);$cols=$st->fetchAll(PDO::FETCH_ASSOC);
+  if($encrypted){
+   if(isset(dc_spec()[$t])&&!isset(dc_columns($p,$t)['_Cifrato']))throw new RuntimeException('Schema cifrato incompleto: '.$t);
+   $cols=array_values(array_filter($cols,fn($c)=>!in_array($c['COLUMN_NAME'],['_Cifrato','_CryptoID'],true)));
+  }
   if(count($cols)!==count($spec['columns'])) throw new RuntimeException('Numero colonne cambiato: '.$t);
   foreach($cols as $i=>$col) {
    $e=$spec['columns'][$i];$typ=preg_replace('/bigint\(\d+\)/','bigint',strtolower($col['COLUMN_TYPE']));
    if ($col['COLUMN_NAME']!==$e['name'] || $typ!==$e['type'] || ($col['IS_NULLABLE']==='YES')!==$e['nullable'] || $col['COLUMN_DEFAULT']!==$e['default'] || (stripos($col['EXTRA'],'auto_increment')!==false)!==$e['auto'] || $col['COLLATION_NAME']!==$e['collation'] || preg_match('/generated/i',$col['EXTRA'])) throw new RuntimeException('Struttura MySQL diversa dalla mappa '.$map['version'].': '.$t.'.'.$e['name']);
   }
   $st=$p->prepare('SELECT INDEX_NAME,COLUMN_NAME FROM information_schema.STATISTICS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=? AND NON_UNIQUE=0 ORDER BY INDEX_NAME,SEQ_IN_INDEX');$st->execute([$t]);$idx=[];
-  foreach($st as $r)$idx[$r['INDEX_NAME']][]=$r['COLUMN_NAME'];
+  foreach($st as $r){if($encrypted&&$r['COLUMN_NAME']==='_CryptoID')continue;$idx[$r['INDEX_NAME']][]=$r['COLUMN_NAME'];}
   $u=array_map(fn($a)=>implode('|',$a),array_values($idx));$e=array_map(fn($a)=>implode('|',$a),$spec['unique']);sort($u);sort($e);
   if($u!==$e)throw new RuntimeException('Vincoli univoci diversi: '.$t);
   $st=$p->prepare('SELECT k.COLUMN_NAME,k.REFERENCED_TABLE_NAME,k.REFERENCED_COLUMN_NAME,r.UPDATE_RULE,r.DELETE_RULE FROM information_schema.KEY_COLUMN_USAGE k JOIN information_schema.REFERENTIAL_CONSTRAINTS r ON r.CONSTRAINT_SCHEMA=k.CONSTRAINT_SCHEMA AND r.CONSTRAINT_NAME=k.CONSTRAINT_NAME AND r.TABLE_NAME=k.TABLE_NAME WHERE k.TABLE_SCHEMA=DATABASE() AND k.TABLE_NAME=? AND k.REFERENCED_TABLE_NAME IS NOT NULL');$st->execute([$t]);$f=[];
@@ -99,12 +105,16 @@ function scan(PDO $s,array $map): array {
 }
 function digestRows(PDO $db,string $table,array $cols): string {
  $hashes=[];
- foreach($db->query('SELECT '.implode(',',array_map(fn($c)=>qi($c['name']),$cols)).' FROM '.qi($table),PDO::FETCH_NUM) as $row){
+ $encrypted=$db->getAttribute(PDO::ATTR_DRIVER_NAME)==='mysql'&&dc_active($db);
+ $rows=$encrypted?dc_iter($db,$table):$db->query('SELECT '.implode(',',array_map(fn($c)=>qi($c['name']),$cols)).' FROM '.qi($table),PDO::FETCH_NUM);
+ foreach($rows as $row){
+  if($encrypted)$row=array_map(fn($c)=>$row[$c['name']],$cols);
   $v=[];foreach($row as $i=>$x)$v[]=$x===null?null:($cols[$i]['type']==='bigint'?(string)(int)$x:base64_encode((string)$x));
   $hashes[]=hash('sha256',json_encode($v,JSON_THROW_ON_ERROR));
  }sort($hashes);return hash('sha256',implode('',$hashes));
 }
 function importData(PDO $p,PDO $s,array $map,array $counts): array {
+ if(dc_active($p))throw new RuntimeException('Con cifratura attiva usare soltanto la procedura per tabelle e la mappa v4.');
  $lock='sqlite_import_'.substr(hash('sha256',(string)$p->query('SELECT DATABASE()')->fetchColumn()),0,32);
  $st=$p->prepare('SELECT GET_LOCK(?,0)');$st->execute([$lock]);if((int)$st->fetchColumn()!==1)throw new RuntimeException('Altra importazione in corso.');
  try {

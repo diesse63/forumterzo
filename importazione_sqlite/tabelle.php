@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 require_once __DIR__.'/motore.php';
-function table_mapping(): array {return json_decode(file_get_contents(__DIR__.'/mappa_v3.json'),true,512,JSON_THROW_ON_ERROR);}
+function table_mapping(): array {return json_decode(file_get_contents(__DIR__.'/mappa_v4.json'),true,512,JSON_THROW_ON_ERROR);}
 function table_source(string $file): PDO {
  $head=file_get_contents($file,false,null,0,16);
  if($head!=="SQLite format 3\0")throw new RuntimeException('Il file non è SQLite.');
@@ -93,10 +93,7 @@ function table_identity(array $values,array $spec): array {
  throw new RuntimeException('Riga senza chiave univoca valorizzata: aggiornamento ambiguo.');
 }
 function table_where(array $key): string{return implode(' AND ',array_map(fn($k)=>qi($k).'=?',array_keys($key)));}
-function table_find(PDO $p,string $table,array $key): ?array {
- $q=$p->prepare('SELECT * FROM '.qi($table).' WHERE '.table_where($key));$q->execute(array_values($key));
- $row=$q->fetch(PDO::FETCH_ASSOC);return $row===false?null:$row;
-}
+function table_find(PDO $p,string $table,array $key): ?array {return dc_find($p,$table,$key);}
 function table_equal(array $a,array $b): bool {
  foreach($b as $key=>$value)if(!array_key_exists($key,$a))return false;
  foreach($b as $key=>$value)if(($a[$key]===null)!==($value===null)||($value!==null&&(string)$a[$key]!== (string)$value))return false;
@@ -144,10 +141,10 @@ function table_import(PDO $p,PDO $s,array $map,array $order,array $expected,stri
     $values=table_values($row,$spec);$key=table_identity($values,$spec);$old=table_find($p,$t,$key);
     foreach($spec['logical_fk']??[] as $fk)if($values[$fk['column']]!==null&&!table_find($p,$fk['table'],[$fk['ref']=>$values[$fk['column']]]))throw new RuntimeException('Riferimento mancante in '.$t.' verso '.$fk['table']);
     if($old===null){
-     $q=$p->prepare('INSERT INTO '.qi($t).' ('.implode(',',array_map('qi',array_keys($values))).') VALUES ('.implode(',',array_fill(0,count($values),'?')).')');$q->execute(array_values($values));
+     dc_insert($p,$t,$values);
     }elseif(!table_equal($old,$values)){
      $changes=array_diff_key($values,$key);
-     if($changes){$q=$p->prepare('UPDATE '.qi($t).' SET '.implode(',',array_map(fn($c)=>qi($c).'=?',array_keys($changes))).' WHERE '.table_where($key));$q->execute(array_merge(array_values($changes),array_values($key)));}
+     if($changes)dc_update($p,$t,$key,$changes);
     }
     if(!table_equal(table_find($p,$t,$key)??[],$values))throw new RuntimeException('Verifica riga fallita: '.$t);
    }

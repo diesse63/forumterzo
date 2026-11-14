@@ -10,3 +10,5 @@
 /private/security.php
 
 /private/email_*.php
+
+/private/dati_security.php

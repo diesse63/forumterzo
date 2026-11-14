@@ -1,0 +1,195 @@
+{
+  "version": "1.0.0",
+  "tables": {
+    "Tipologia": {
+      "fields": [
+        "Tipologia"
+      ],
+      "indexed": [
+        "Tipologia"
+      ],
+      "identity": "ID"
+    },
+    "Runts": {
+      "fields": [
+        "CodiceFiscale",
+        "Denominazione",
+        "Cognome",
+        "Nome",
+        "Provincia"
+      ],
+      "indexed": [
+        "CodiceFiscale"
+      ],
+      "identity": "_CryptoID"
+    },
+    "CesvotTelefono": {
+      "fields": [
+        "Denominazione",
+        "Telefono"
+      ],
+      "indexed": [
+        "Denominazione",
+        "Telefono"
+      ],
+      "identity": "ID"
+    },
+    "CesvotMail": {
+      "fields": [
+        "Denominazione",
+        "Mail"
+      ],
+      "indexed": [
+        "Denominazione",
+        "Mail"
+      ],
+      "identity": "ID"
+    },
+    "Temporanea": {
+      "fields": [
+        "SOGGETTO",
+        "MAIL"
+      ],
+      "indexed": [],
+      "identity": "_CryptoID"
+    },
+    "MailList": {
+      "fields": [
+        "Descrizione",
+        "Note"
+      ],
+      "indexed": [
+        "Descrizione"
+      ],
+      "identity": "ID"
+    },
+    "AgoraTipoEvento": {
+      "fields": [
+        "IntestazionePagina"
+      ],
+      "indexed": [],
+      "identity": "ID"
+    },
+    "Report": {
+      "fields": [
+        "Password"
+      ],
+      "indexed": [],
+      "identity": "ID"
+    },
+    "Mail": {
+      "fields": [
+        "Indirizzo"
+      ],
+      "indexed": [
+        "Indirizzo"
+      ],
+      "identity": "ID"
+    },
+    "Telefono": {
+      "fields": [
+        "Telefono"
+      ],
+      "indexed": [
+        "Telefono"
+      ],
+      "identity": "ID"
+    },
+    "Associazioni": {
+      "fields": [
+        "COLONNA3",
+        "SOGGETTO",
+        "CODICEFISCALE"
+      ],
+      "indexed": [
+        "SOGGETTO"
+      ],
+      "identity": "ID"
+    },
+    "Agora": {
+      "fields": [
+        "Data",
+        "Evento",
+        "ODG",
+        "Verbale",
+        "Documenti"
+      ],
+      "indexed": [
+        "Data",
+        "Evento"
+      ],
+      "identity": "ID"
+    },
+    "AgoraPresenti": {
+      "fields": [
+        "Rappresentante"
+      ],
+      "indexed": [
+        "Rappresentante"
+      ],
+      "identity": "ID"
+    },
+    "Soggetti": {
+      "fields": [
+        "Nome"
+      ],
+      "indexed": [
+        "Nome"
+      ],
+      "identity": "ID"
+    },
+    "Utenti_legacy_v1": {
+      "fields": [
+        "Nome",
+        "Email",
+        "Password"
+      ],
+      "indexed": [
+        "Email"
+      ],
+      "identity": "ID",
+      "optional": true
+    },
+    "email_configurazione": {
+      "fields": [
+        "URLPonte",
+        "Mittente",
+        "NomeMittente",
+        "EmailTest"
+      ],
+      "indexed": [],
+      "identity": "ID",
+      "optional": true
+    },
+    "email_messaggi": {
+      "fields": [
+        "Oggetto",
+        "HTML",
+        "Testo"
+      ],
+      "indexed": [],
+      "identity": "ID",
+      "optional": true
+    },
+    "email_destinatari": {
+      "fields": [
+        "Nome",
+        "Email",
+        "Ente"
+      ],
+      "indexed": [
+        "Email"
+      ],
+      "identity": "ID",
+      "optional": true
+    },
+    "email_invii": {
+      "fields": [
+        "EmailEffettiva"
+      ],
+      "indexed": [],
+      "identity": "ID",
+      "optional": true
+    }
+  }
+}

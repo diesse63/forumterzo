@@ -1,0 +1,1055 @@
+{
+  "version": "4.0.0",
+  "tables": {
+    "Tipologia": {
+      "source_sql": "CREATE TABLE \"Tipologia\" (\r\n\t\"ID\"\tINTEGER,\r\n\t\"Tipologia\"\tTEXT NOT NULL UNIQUE,\r\n\tPRIMARY KEY(\"ID\" AUTOINCREMENT)\r\n)",
+      "columns": [
+        {
+          "name": "ID",
+          "type": "bigint",
+          "nullable": false,
+          "default": null,
+          "auto": true,
+          "collation": null
+        },
+        {
+          "name": "Tipologia",
+          "type": "varbinary(768)",
+          "nullable": false,
+          "default": null,
+          "auto": false,
+          "collation": null
+        }
+      ],
+      "unique": [
+        [
+          "ID"
+        ],
+        [
+          "Tipologia"
+        ]
+      ],
+      "fk": [],
+      "checks": {},
+      "mapping": {
+        "ID": {
+          "source": "ID",
+          "transform": "integer"
+        },
+        "Tipologia": {
+          "source": "Tipologia",
+          "transform": "identity"
+        }
+      }
+    },
+    "Runts": {
+      "source_sql": "CREATE TABLE \"Runts\" (\n\t\"CodiceFiscale\"\tTEXT UNIQUE,\n\t\"Denominazione\"\tTEXT,\n\t\"Cognome\"\tTEXT,\n\t\"Nome\"\tTEXT,\n\t\"IDAssociazione\"\tINTEGER,\n\t\"Provincia\"\tTEXT,\n\tPRIMARY KEY(\"CodiceFiscale\")\n)",
+      "columns": [
+        {
+          "name": "CodiceFiscale",
+          "type": "varbinary(768)",
+          "nullable": true,
+          "default": null,
+          "auto": false,
+          "collation": null
+        },
+        {
+          "name": "Denominazione",
+          "type": "longtext",
+          "nullable": true,
+          "default": null,
+          "auto": false,
+          "collation": "utf8mb4_bin"
+        },
+        {
+          "name": "Cognome",
+          "type": "longtext",
+          "nullable": true,
+          "default": null,
+          "auto": false,
+          "collation": "utf8mb4_bin"
+        },
+        {
+          "name": "Nome",
+          "type": "longtext",
+          "nullable": true,
+          "default": null,
+          "auto": false,
+          "collation": "utf8mb4_bin"
+        },
+        {
+          "name": "IDAssociazione",
+          "type": "bigint",
+          "nullable": true,
+          "default": null,
+          "auto": false,
+          "collation": null
+        },
+        {
+          "name": "Provincia",
+          "type": "longtext",
+          "nullable": true,
+          "default": null,
+          "auto": false,
+          "collation": "utf8mb4_bin"
+        }
+      ],
+      "unique": [
+        [
+          "CodiceFiscale"
+        ]
+      ],
+      "fk": [],
+      "checks": {},
+      "mapping": {
+        "CodiceFiscale": {
+          "source": "CodiceFiscale",
+          "transform": "identity"
+        },
+        "Denominazione": {
+          "source": "Denominazione",
+          "transform": "identity"
+        },
+        "Cognome": {
+          "source": "Cognome",
+          "transform": "identity"
+        },
+        "Nome": {
+          "source": "Nome",
+          "transform": "identity"
+        },
+        "IDAssociazione": {
+          "source": "IDAssociazione",
+          "transform": "integer"
+        },
+        "Provincia": {
+          "source": "Provincia",
+          "transform": "identity"
+        }
+      }
+    },
+    "CesvotTelefono": {
+      "source_sql": "CREATE TABLE \"CesvotTelefono\" (\n\t\"ID\"\tINTEGER,\n\t\"Denominazione\"\tTEXT,\n\t\"Telefono\"\tTEXT,\n\tUNIQUE(\"Denominazione\",\"Telefono\"),\n\tPRIMARY KEY(\"ID\" AUTOINCREMENT)\n)",
+      "columns": [
+        {
+          "name": "ID",
+          "type": "bigint",
+          "nullable": false,
+          "default": null,
+          "auto": true,
+          "collation": null
+        },
+        {
+          "name": "Denominazione",
+          "type": "varbinary(768)",
+          "nullable": true,
+          "default": null,
+          "auto": false,
+          "collation": null
+        },
+        {
+          "name": "Telefono",
+          "type": "varbinary(768)",
+          "nullable": true,
+          "default": null,
+          "auto": false,
+          "collation": null
+        }
+      ],
+      "unique": [
+        [
+          "ID"
+        ],
+        [
+          "Denominazione",
+          "Telefono"
+        ]
+      ],
+      "fk": [],
+      "checks": {},
+      "mapping": {
+        "ID": {
+          "source": "ID",
+          "transform": "integer"
+        },
+        "Denominazione": {
+          "source": "Denominazione",
+          "transform": "identity"
+        },
+        "Telefono": {
+          "source": "Telefono",
+          "transform": "identity"
+        }
+      }
+    },
+    "CesvotMail": {
+      "source_sql": "CREATE TABLE \"CesvotMail\" (\r\n\t\"ID\"\tINTEGER,\r\n\t\"Denominazione\"\tTEXT,\r\n\t\"Mail\"\tTEXT,\r\n\tUNIQUE(\"Denominazione\",\"Mail\"),\r\n\tPRIMARY KEY(\"ID\" AUTOINCREMENT)\r\n)",
+      "columns": [
+        {
+          "name": "ID",
+          "type": "bigint",
+          "nullable": false,
+          "default": null,
+          "auto": true,
+          "collation": null
+        },
+        {
+          "name": "Denominazione",
+          "type": "varbinary(768)",
+          "nullable": true,
+          "default": null,
+          "auto": false,
+          "collation": null
+        },
+        {
+          "name": "Mail",
+          "type": "varbinary(768)",
+          "nullable": true,
+          "default": null,
+          "auto": false,
+          "collation": null
+        }
+      ],
+      "unique": [
+        [
+          "ID"
+        ],
+        [
+          "Denominazione",
+          "Mail"
+        ]
+      ],
+      "fk": [],
+      "checks": {},
+      "mapping": {
+        "ID": {
+          "source": "ID",
+          "transform": "integer"
+        },
+        "Denominazione": {
+          "source": "Denominazione",
+          "transform": "identity"
+        },
+        "Mail": {
+          "source": "Mail",
+          "transform": "identity"
+        }
+      }
+    },
+    "Temporanea": {
+      "source_sql": "CREATE TABLE \"Temporanea\" (\n\t\"SOGGETTO\"\tTEXT,\n\t\"MAIL\"\tTEXT\n)",
+      "columns": [
+        {
+          "name": "SOGGETTO",
+          "type": "longtext",
+          "nullable": true,
+          "default": null,
+          "auto": false,
+          "collation": "utf8mb4_bin"
+        },
+        {
+          "name": "MAIL",
+          "type": "longtext",
+          "nullable": true,
+          "default": null,
+          "auto": false,
+          "collation": "utf8mb4_bin"
+        }
+      ],
+      "unique": [],
+      "fk": [],
+      "checks": {},
+      "mapping": {
+        "SOGGETTO": {
+          "source": "SOGGETTO",
+          "transform": "identity"
+        },
+        "MAIL": {
+          "source": "MAIL",
+          "transform": "identity"
+        }
+      }
+    },
+    "MailList": {
+      "source_sql": "CREATE TABLE \"MailList\" (\n\t\"ID\"\tINTEGER NOT NULL,\n\t\"Descrizione\"\tTEXT NOT NULL UNIQUE,\n\t\"Note\"\tTEXT,\n\tPRIMARY KEY(\"ID\" AUTOINCREMENT)\n)",
+      "columns": [
+        {
+          "name": "ID",
+          "type": "bigint",
+          "nullable": false,
+          "default": null,
+          "auto": true,
+          "collation": null
+        },
+        {
+          "name": "Descrizione",
+          "type": "varbinary(768)",
+          "nullable": false,
+          "default": null,
+          "auto": false,
+          "collation": null
+        },
+        {
+          "name": "Note",
+          "type": "longtext",
+          "nullable": true,
+          "default": null,
+          "auto": false,
+          "collation": "utf8mb4_bin"
+        }
+      ],
+      "unique": [
+        [
+          "ID"
+        ],
+        [
+          "Descrizione"
+        ]
+      ],
+      "fk": [],
+      "checks": {},
+      "mapping": {
+        "ID": {
+          "source": "ID",
+          "transform": "integer"
+        },
+        "Descrizione": {
+          "source": "Descrizione",
+          "transform": "identity"
+        },
+        "Note": {
+          "source": "Note",
+          "transform": "identity"
+        }
+      }
+    },
+    "AgoraTipoEvento": {
+      "source_sql": "CREATE TABLE \"AgoraTipoEvento\" (\n\t\"ID\"\tINTEGER NOT NULL,\n\t\"IntestazionePagina\"\tTEXT NOT NULL,\n\tPRIMARY KEY(\"ID\" AUTOINCREMENT)\n)",
+      "columns": [
+        {
+          "name": "ID",
+          "type": "bigint",
+          "nullable": false,
+          "default": null,
+          "auto": true,
+          "collation": null
+        },
+        {
+          "name": "IntestazionePagina",
+          "type": "longtext",
+          "nullable": false,
+          "default": null,
+          "auto": false,
+          "collation": "utf8mb4_bin"
+        }
+      ],
+      "unique": [
+        [
+          "ID"
+        ]
+      ],
+      "fk": [],
+      "checks": {},
+      "mapping": {
+        "ID": {
+          "source": "ID",
+          "transform": "integer"
+        },
+        "IntestazionePagina": {
+          "source": "IntestazionePagina",
+          "transform": "identity"
+        }
+      }
+    },
+    "Report": {
+      "source_sql": "CREATE TABLE \"Report\" (\r\n\t\"ID\"\tINTEGER NOT NULL,\r\n\t\"Password\"\tTEXT NOT NULL,\r\n\tPRIMARY KEY(\"ID\" AUTOINCREMENT)\r\n)",
+      "columns": [
+        {
+          "name": "ID",
+          "type": "bigint",
+          "nullable": false,
+          "default": null,
+          "auto": true,
+          "collation": null
+        },
+        {
+          "name": "Password",
+          "type": "longtext",
+          "nullable": false,
+          "default": null,
+          "auto": false,
+          "collation": "utf8mb4_bin"
+        }
+      ],
+      "unique": [
+        [
+          "ID"
+        ]
+      ],
+      "fk": [],
+      "checks": {},
+      "mapping": {
+        "ID": {
+          "source": "ID",
+          "transform": "integer"
+        },
+        "Password": {
+          "source": "Password",
+          "transform": "identity"
+        }
+      }
+    },
+    "Mail": {
+      "source_sql": "CREATE TABLE \"Mail\" (\r\n    ID INTEGER PRIMARY KEY AUTOINCREMENT,\r\n    TipoSoggetto TEXT NOT NULL CHECK(TipoSoggetto IN ('ASSOCIAZIONE','REFERENTE','ALTRO')),\r\n    IDSoggetto INTEGER NOT NULL,\r\n    Indirizzo TEXT NOT NULL,\r\n    PEC INTEGER DEFAULT 0 CHECK(PEC IN (0,1)),\r\n    Predefinito INTEGER DEFAULT 0 CHECK(Predefinito IN (0,1)),\r\n    UNIQUE(TipoSoggetto, IDSoggetto, Indirizzo)\r\n)",
+      "columns": [
+        {
+          "name": "ID",
+          "type": "bigint",
+          "nullable": false,
+          "default": null,
+          "auto": true,
+          "collation": null
+        },
+        {
+          "name": "TipoSoggetto",
+          "type": "varbinary(768)",
+          "nullable": false,
+          "default": null,
+          "auto": false,
+          "collation": null
+        },
+        {
+          "name": "IDSoggetto",
+          "type": "bigint",
+          "nullable": false,
+          "default": null,
+          "auto": false,
+          "collation": null
+        },
+        {
+          "name": "Indirizzo",
+          "type": "varbinary(768)",
+          "nullable": false,
+          "default": null,
+          "auto": false,
+          "collation": null
+        },
+        {
+          "name": "PEC",
+          "type": "bigint",
+          "nullable": true,
+          "default": "0",
+          "auto": false,
+          "collation": null
+        },
+        {
+          "name": "Predefinito",
+          "type": "bigint",
+          "nullable": true,
+          "default": "0",
+          "auto": false,
+          "collation": null
+        }
+      ],
+      "unique": [
+        [
+          "ID"
+        ],
+        [
+          "TipoSoggetto",
+          "IDSoggetto",
+          "Indirizzo"
+        ]
+      ],
+      "fk": [],
+      "checks": {
+        "ck_Mail_1": "BINARY `TipoSoggetto` IN ('ASSOCIAZIONE','REFERENTE','ALTRO')",
+        "ck_Mail_2": "`PEC` IN (0,1)",
+        "ck_Mail_3": "`Predefinito` IN (0,1)"
+      },
+      "mapping": {
+        "ID": {
+          "source": "ID",
+          "transform": "integer"
+        },
+        "TipoSoggetto": {
+          "source": "TipoSoggetto",
+          "transform": "identity"
+        },
+        "IDSoggetto": {
+          "source": "IDSoggetto",
+          "transform": "integer"
+        },
+        "Indirizzo": {
+          "source": "Indirizzo",
+          "transform": "identity"
+        },
+        "PEC": {
+          "source": "PEC",
+          "transform": "integer"
+        },
+        "Predefinito": {
+          "source": "Predefinito",
+          "transform": "integer"
+        }
+      }
+    },
+    "Telefono": {
+      "source_sql": "CREATE TABLE \"Telefono\" (\r\n    ID INTEGER PRIMARY KEY AUTOINCREMENT,\r\n    TipoSoggetto TEXT NOT NULL CHECK(TipoSoggetto IN ('ASSOCIAZIONE','REFERENTE','ALTRO')),\r\n    IDSoggetto INTEGER NOT NULL,\r\n    Telefono TEXT NOT NULL,\r\n    Predefinito INTEGER DEFAULT 0,\r\n    UNIQUE(TipoSoggetto, IDSoggetto, Telefono)\r\n)",
+      "columns": [
+        {
+          "name": "ID",
+          "type": "bigint",
+          "nullable": false,
+          "default": null,
+          "auto": true,
+          "collation": null
+        },
+        {
+          "name": "TipoSoggetto",
+          "type": "varbinary(768)",
+          "nullable": false,
+          "default": null,
+          "auto": false,
+          "collation": null
+        },
+        {
+          "name": "IDSoggetto",
+          "type": "bigint",
+          "nullable": false,
+          "default": null,
+          "auto": false,
+          "collation": null
+        },
+        {
+          "name": "Telefono",
+          "type": "varbinary(768)",
+          "nullable": false,
+          "default": null,
+          "auto": false,
+          "collation": null
+        },
+        {
+          "name": "Predefinito",
+          "type": "bigint",
+          "nullable": true,
+          "default": "0",
+          "auto": false,
+          "collation": null
+        }
+      ],
+      "unique": [
+        [
+          "ID"
+        ],
+        [
+          "TipoSoggetto",
+          "IDSoggetto",
+          "Telefono"
+        ]
+      ],
+      "fk": [],
+      "checks": {
+        "ck_Telefono_1": "BINARY `TipoSoggetto` IN ('ASSOCIAZIONE','REFERENTE','ALTRO')"
+      },
+      "mapping": {
+        "ID": {
+          "source": "ID",
+          "transform": "integer"
+        },
+        "TipoSoggetto": {
+          "source": "TipoSoggetto",
+          "transform": "identity"
+        },
+        "IDSoggetto": {
+          "source": "IDSoggetto",
+          "transform": "integer"
+        },
+        "Telefono": {
+          "source": "Telefono",
+          "transform": "identity"
+        },
+        "Predefinito": {
+          "source": "Predefinito",
+          "transform": "integer"
+        }
+      }
+    },
+    "Associazioni": {
+      "source_sql": "CREATE TABLE \"Associazioni\" (\n\t\"ID\"\tINTEGER,\n\t\"ID_TIPOLOGIA\"\tINTEGER NOT NULL,\n\t\"COLONNA3\"\tTEXT,\n\t\"TAVOLO\"\tBLOB NOT NULL CHECK(\"TAVOLO\" IN (0, 1)),\n\t\"DIRETTIVO_DELEGAZIONE\"\tINTEGER NOT NULL CHECK(\"DIRETTIVO_DELEGAZIONE\" IN (0, 1)),\n\t\"SOGGETTO\"\tTEXT NOT NULL UNIQUE,\n\t\"CODICEFISCALE\"\tTEXT,\n\tFOREIGN KEY(\"ID_TIPOLOGIA\") REFERENCES \"Tipologia\"(\"ID\") ON UPDATE CASCADE ON DELETE RESTRICT,\n\tPRIMARY KEY(\"ID\" AUTOINCREMENT)\n)",
+      "columns": [
+        {
+          "name": "ID",
+          "type": "bigint",
+          "nullable": false,
+          "default": null,
+          "auto": true,
+          "collation": null
+        },
+        {
+          "name": "ID_TIPOLOGIA",
+          "type": "bigint",
+          "nullable": false,
+          "default": null,
+          "auto": false,
+          "collation": null
+        },
+        {
+          "name": "COLONNA3",
+          "type": "longtext",
+          "nullable": true,
+          "default": null,
+          "auto": false,
+          "collation": "utf8mb4_bin"
+        },
+        {
+          "name": "TAVOLO",
+          "type": "bigint",
+          "nullable": false,
+          "default": null,
+          "auto": false,
+          "collation": null
+        },
+        {
+          "name": "DIRETTIVO_DELEGAZIONE",
+          "type": "bigint",
+          "nullable": false,
+          "default": null,
+          "auto": false,
+          "collation": null
+        },
+        {
+          "name": "SOGGETTO",
+          "type": "varbinary(768)",
+          "nullable": false,
+          "default": null,
+          "auto": false,
+          "collation": null
+        },
+        {
+          "name": "CODICEFISCALE",
+          "type": "longtext",
+          "nullable": true,
+          "default": null,
+          "auto": false,
+          "collation": "utf8mb4_bin"
+        }
+      ],
+      "unique": [
+        [
+          "ID"
+        ],
+        [
+          "SOGGETTO"
+        ]
+      ],
+      "fk": [
+        {
+          "column": "ID_TIPOLOGIA",
+          "table": "Tipologia",
+          "ref": "ID",
+          "update": "CASCADE",
+          "delete": "RESTRICT"
+        }
+      ],
+      "checks": {
+        "ck_Associazioni_1": "`TAVOLO` IN (0, 1)",
+        "ck_Associazioni_2": "`DIRETTIVO_DELEGAZIONE` IN (0, 1)"
+      },
+      "mapping": {
+        "ID": {
+          "source": "ID",
+          "transform": "integer"
+        },
+        "ID_TIPOLOGIA": {
+          "source": "ID_TIPOLOGIA",
+          "transform": "integer"
+        },
+        "COLONNA3": {
+          "source": "COLONNA3",
+          "transform": "identity"
+        },
+        "TAVOLO": {
+          "source": "TAVOLO",
+          "transform": "integer"
+        },
+        "DIRETTIVO_DELEGAZIONE": {
+          "source": "DIRETTIVO_DELEGAZIONE",
+          "transform": "integer"
+        },
+        "SOGGETTO": {
+          "source": "SOGGETTO",
+          "transform": "identity"
+        },
+        "CODICEFISCALE": {
+          "source": "CODICEFISCALE",
+          "transform": "identity"
+        }
+      }
+    },
+    "ListaMail": {
+      "source_sql": "CREATE TABLE \"ListaMail\" (\r\n    \"ID\" INTEGER PRIMARY KEY AUTOINCREMENT,\r\n    \"IDListaMail\" INTEGER NOT NULL,\r\n    \"IDMail\" INTEGER NOT NULL, TipoInvio TEXT DEFAULT 'CCN',\r\n    UNIQUE (\"IDListaMail\", \"IDMail\"),\r\n    FOREIGN KEY (\"IDMail\")\r\n        REFERENCES \"Mail\"(\"ID\")\r\n        ON UPDATE CASCADE\r\n        ON DELETE CASCADE\r\n)",
+      "columns": [
+        {
+          "name": "ID",
+          "type": "bigint",
+          "nullable": false,
+          "default": null,
+          "auto": true,
+          "collation": null
+        },
+        {
+          "name": "IDListaMail",
+          "type": "bigint",
+          "nullable": false,
+          "default": null,
+          "auto": false,
+          "collation": null
+        },
+        {
+          "name": "IDMail",
+          "type": "bigint",
+          "nullable": false,
+          "default": null,
+          "auto": false,
+          "collation": null
+        },
+        {
+          "name": "TipoInvio",
+          "type": "varchar(255)",
+          "nullable": true,
+          "default": "CCN",
+          "auto": false,
+          "collation": "utf8mb4_bin"
+        }
+      ],
+      "unique": [
+        [
+          "ID"
+        ],
+        [
+          "IDListaMail",
+          "IDMail"
+        ]
+      ],
+      "fk": [
+        {
+          "column": "IDMail",
+          "table": "Mail",
+          "ref": "ID",
+          "update": "CASCADE",
+          "delete": "CASCADE"
+        }
+      ],
+      "checks": {},
+      "mapping": {
+        "ID": {
+          "source": "ID",
+          "transform": "integer"
+        },
+        "IDListaMail": {
+          "source": "IDListaMail",
+          "transform": "integer"
+        },
+        "IDMail": {
+          "source": "IDMail",
+          "transform": "integer"
+        },
+        "TipoInvio": {
+          "source": "TipoInvio",
+          "transform": "identity"
+        }
+      },
+      "logical_fk": [
+        {
+          "column": "IDListaMail",
+          "table": "MailList",
+          "ref": "ID",
+          "update": "RESTRICT",
+          "delete": "RESTRICT"
+        }
+      ]
+    },
+    "Agora": {
+      "source_sql": "CREATE TABLE \"Agora\" (\r\n    ID INTEGER PRIMARY KEY,\r\n    Data TEXT NOT NULL,\r\n    Evento TEXT,\r\n    ODG TEXT,\r\n    Verbale TEXT,\r\n    Documenti TEXT,\r\n    IDTipoEvento INTEGER NOT NULL,\r\n    FOREIGN KEY(IDTipoEvento) REFERENCES AgoraTipoEvento(ID) ON DELETE RESTRICT\r\n)",
+      "columns": [
+        {
+          "name": "ID",
+          "type": "bigint",
+          "nullable": false,
+          "default": null,
+          "auto": true,
+          "collation": null
+        },
+        {
+          "name": "Data",
+          "type": "varbinary(768)",
+          "nullable": false,
+          "default": null,
+          "auto": false,
+          "collation": null
+        },
+        {
+          "name": "Evento",
+          "type": "varbinary(768)",
+          "nullable": true,
+          "default": null,
+          "auto": false,
+          "collation": null
+        },
+        {
+          "name": "ODG",
+          "type": "longtext",
+          "nullable": true,
+          "default": null,
+          "auto": false,
+          "collation": "utf8mb4_bin"
+        },
+        {
+          "name": "Verbale",
+          "type": "longtext",
+          "nullable": true,
+          "default": null,
+          "auto": false,
+          "collation": "utf8mb4_bin"
+        },
+        {
+          "name": "Documenti",
+          "type": "longtext",
+          "nullable": true,
+          "default": null,
+          "auto": false,
+          "collation": "utf8mb4_bin"
+        },
+        {
+          "name": "IDTipoEvento",
+          "type": "bigint",
+          "nullable": false,
+          "default": null,
+          "auto": false,
+          "collation": null
+        }
+      ],
+      "unique": [
+        [
+          "ID"
+        ],
+        [
+          "Data",
+          "Evento",
+          "IDTipoEvento"
+        ]
+      ],
+      "fk": [
+        {
+          "column": "IDTipoEvento",
+          "table": "AgoraTipoEvento",
+          "ref": "ID",
+          "update": "NO ACTION",
+          "delete": "RESTRICT"
+        }
+      ],
+      "checks": {},
+      "mapping": {
+        "ID": {
+          "source": "ID",
+          "transform": "integer"
+        },
+        "Data": {
+          "source": "Data",
+          "transform": "identity"
+        },
+        "Evento": {
+          "source": "Evento",
+          "transform": "identity"
+        },
+        "ODG": {
+          "source": "ODG",
+          "transform": "identity"
+        },
+        "Verbale": {
+          "source": "Verbale",
+          "transform": "identity"
+        },
+        "Documenti": {
+          "source": "Documenti",
+          "transform": "identity"
+        },
+        "IDTipoEvento": {
+          "source": "IDTipoEvento",
+          "transform": "integer"
+        }
+      }
+    },
+    "AgoraPresenti": {
+      "source_sql": "CREATE TABLE \"AgoraPresenti\" (\n                        \"ID\" INTEGER PRIMARY KEY AUTOINCREMENT, \n                        \"IDRiunioni\" INTEGER NOT NULL, \n                        \"IDAssociazione\" INTEGER NOT NULL, \n                        \"Rappresentante\" TEXT,\n                        FOREIGN KEY(\"IDAssociazione\") REFERENCES \"Associazioni\"(\"ID\") ON UPDATE CASCADE ON DELETE RESTRICT, \n                        FOREIGN KEY(\"IDRiunioni\") REFERENCES \"Agora\"(\"ID\") ON UPDATE CASCADE ON DELETE CASCADE, \n                        UNIQUE(\"IDRiunioni\",\"IDAssociazione\",\"Rappresentante\")\n                    )",
+      "columns": [
+        {
+          "name": "ID",
+          "type": "bigint",
+          "nullable": false,
+          "default": null,
+          "auto": true,
+          "collation": null
+        },
+        {
+          "name": "IDRiunioni",
+          "type": "bigint",
+          "nullable": false,
+          "default": null,
+          "auto": false,
+          "collation": null
+        },
+        {
+          "name": "IDAssociazione",
+          "type": "bigint",
+          "nullable": false,
+          "default": null,
+          "auto": false,
+          "collation": null
+        },
+        {
+          "name": "Rappresentante",
+          "type": "varbinary(768)",
+          "nullable": true,
+          "default": null,
+          "auto": false,
+          "collation": null
+        }
+      ],
+      "unique": [
+        [
+          "ID"
+        ],
+        [
+          "IDRiunioni",
+          "IDAssociazione",
+          "Rappresentante"
+        ]
+      ],
+      "fk": [
+        {
+          "column": "IDRiunioni",
+          "table": "Agora",
+          "ref": "ID",
+          "update": "CASCADE",
+          "delete": "CASCADE"
+        },
+        {
+          "column": "IDAssociazione",
+          "table": "Associazioni",
+          "ref": "ID",
+          "update": "CASCADE",
+          "delete": "RESTRICT"
+        }
+      ],
+      "checks": {},
+      "mapping": {
+        "ID": {
+          "source": "ID",
+          "transform": "integer"
+        },
+        "IDRiunioni": {
+          "source": "IDRiunioni",
+          "transform": "integer"
+        },
+        "IDAssociazione": {
+          "source": "IDAssociazione",
+          "transform": "integer"
+        },
+        "Rappresentante": {
+          "source": "Rappresentante",
+          "transform": "identity"
+        }
+      }
+    },
+    "Soggetti": {
+      "source_sql": "CREATE TABLE \"Soggetti\" (\r\n    ID INTEGER PRIMARY KEY AUTOINCREMENT,\r\n    ID_Associazione INTEGER NOT NULL,\r\n    Nome TEXT NOT NULL,\r\n    Tipo TEXT NOT NULL CHECK(Tipo IN ('LR','AS')),\r\n    \r\n    FOREIGN KEY (ID_Associazione) \r\n        REFERENCES Associazioni(ID)\r\n        ON UPDATE CASCADE \r\n        ON DELETE CASCADE,\r\n\r\n    UNIQUE(ID_Associazione, Nome, Tipo)\r\n)",
+      "columns": [
+        {
+          "name": "ID",
+          "type": "bigint",
+          "nullable": false,
+          "default": null,
+          "auto": true,
+          "collation": null
+        },
+        {
+          "name": "ID_Associazione",
+          "type": "bigint",
+          "nullable": false,
+          "default": null,
+          "auto": false,
+          "collation": null
+        },
+        {
+          "name": "Nome",
+          "type": "varbinary(768)",
+          "nullable": false,
+          "default": null,
+          "auto": false,
+          "collation": null
+        },
+        {
+          "name": "Tipo",
+          "type": "varbinary(768)",
+          "nullable": false,
+          "default": null,
+          "auto": false,
+          "collation": null
+        }
+      ],
+      "unique": [
+        [
+          "ID"
+        ],
+        [
+          "ID_Associazione",
+          "Nome",
+          "Tipo"
+        ]
+      ],
+      "fk": [
+        {
+          "column": "ID_Associazione",
+          "table": "Associazioni",
+          "ref": "ID",
+          "update": "CASCADE",
+          "delete": "CASCADE"
+        }
+      ],
+      "checks": {
+        "ck_Soggetti_1": "BINARY `Tipo` IN ('LR','AS')"
+      },
+      "mapping": {
+        "ID": {
+          "source": "ID",
+          "transform": "integer"
+        },
+        "ID_Associazione": {
+          "source": "ID_Associazione",
+          "transform": "integer"
+        },
+        "Nome": {
+          "source": "Nome",
+          "transform": "identity"
+        },
+        "Tipo": {
+          "source": "Tipo",
+          "transform": "identity"
+        }
+      }
+    }
+  },
+  "ignored_source_tables": [
+    "Utenti"
+  ],
+  "mode": "selected_tables_update",
+  "encryption": {
+    "contract": "schema/cifratura_v1.json",
+    "payload_column": "_Cifrato",
+    "row_id_column": "_CryptoID",
+    "indexes": "HMAC-SHA256 per tabella e campo",
+    "source": "valori logici originali; mai copie dei campi fisici HMAC"
+  }
+}
