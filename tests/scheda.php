@@ -44,7 +44,7 @@ $detail=enti_detail($p,$id);sc_check($detail['CODICEFISCALE']===$cf&&count($deta
 $mutate('runts_align',['runts_cf'=>$cf,'import_person'=>'1','person_type'=>'AS']);sc_check(count(enti_detail($p,$id)['Persone'])===2,'Persona RUNTS duplicata');
 $cm=(int)dc_insert($p,'CesvotMail',['Denominazione'=>'DA RUNTS '.$tag,'Mail'=>'cesvot.'.strtolower($tag).'@example.invalid']);
 $ct=(int)dc_insert($p,'CesvotTelefono',['Denominazione'=>'DA RUNTS '.$tag,'Telefono'=>'055 987654']);
-$foreignCm=(int)dc_insert($p,'CesvotMail',['Denominazione'=>'ALTRO ENTE','Mail'=>'altra@example.invalid']);
+$foreignCm=(int)dc_insert($p,'CesvotMail',['Denominazione'=>'ALTRO ENTE '.$tag,'Mail'=>'altra.'.strtolower($tag).'@example.invalid']);
 sc_bad(fn()=>$mutate('cesvot_import',['table'=>'Mail','source_ids'=>[$cm],'source_revision'=>'obsoleta']),'Cesvot modificato dopo anteprima accettato');
 $candidates=scheda_cesvot($p,enti_detail($p,$id));sc_check(count($candidates['Mail'])===1&&count($candidates['Telefono'])===1,'Confronto Cesvot');
 sc_bad(fn()=>$mutate('cesvot_import',['table'=>'Mail','source_ids'=>[$foreignCm]]),'Cesvot estraneo ammesso');
