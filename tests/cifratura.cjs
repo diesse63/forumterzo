@@ -17,7 +17,8 @@ const {chromium}=require('playwright'),{spawn}=require('child_process'),fs=requi
   check((await page.locator('body').textContent()).includes('BROWSER CIFRATO'),'Scrittura cifrata browser');
   await page.goto(base+'/invio_email.php?tab=componi');
   await page.locator('.email-contact input:enabled').first().check();await page.locator('#email-subject').fill('BOZZA CIFRATA BROWSER');await page.locator('#email-editor').fill('Testo cifrato {nome}');
-  await Promise.all([page.waitForURL('**/invio_email.php?tab=componi&id=*&salvato=1'),page.getByRole('button',{name:'Salva bozza e destinatari'}).click()]);
+  await Promise.all([page.waitForURL('**/invio_email.php?tab=registro&id=*&salvato=1'),page.getByRole('button',{name:'Salva bozza e destinatari'}).click()]);
+  await page.goto(base+'/invio_email.php?tab=componi&id='+new URL(page.url()).searchParams.get('id'));
   check(await page.locator('#email-subject').inputValue()==='BOZZA CIFRATA BROWSER','Rilettura bozza cifrata');
   const key='private/dati_security.php',hold=key+'.test-hold';
   fs.renameSync(key,hold);
