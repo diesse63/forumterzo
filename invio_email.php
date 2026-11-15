@@ -57,8 +57,8 @@ page_start('Invio mail','Seleziona nominativi, prepara messaggi personali e cons
 ?>
 <link rel="stylesheet" href="/assets/email.css?v=<?=em_h($assetVersion('/assets/email.css'))?>">
 <nav class="email-tabs" aria-label="Sezioni gestione email">
-<a href="/invio_email.php?tab=componi" <?=$tab==='componi'?'aria-current="page"':''?>>Destinatari e messaggio</a>
 <a href="/invio_email.php?tab=registro" <?=$tab==='registro'?'aria-current="page"':''?>>Archivio e invii</a>
+<a href="/invio_email.php?tab=componi" <?=$tab==='componi'?'aria-current="page"':''?>>Destinatari e messaggio</a>
 </nav>
 <?php if($message):?><aside role="status"><?=em_h($message)?></aside><?php endif;if(isset($_GET['salvato'])):?><aside role="status">Salvataggio completato.</aside><?php endif;?>
 <?php if($config):?><p class="email-mode">Configurazione attiva #<?=(int)$config['ID']?> · Mittente <?=em_h($config['Mittente'])?>. Gli invii sono diretti agli indirizzi selezionati nell’anagrafica.</p><?php if($config['Modalita']!=='produzione'):?><aside>Salvare una nuova configurazione prima di preparare nuove campagne.</aside><?php endif;else:?><aside>Configurazione mancante: un amministratore deve collegare il ponte Google.</aside><?php endif;?>
