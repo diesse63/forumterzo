@@ -244,9 +244,9 @@ function em_encrypted_contacts(PDO $p,string $search,int $type,int $list):array 
  usort($rows,fn($a,$b)=>(int)$a['ID']<=>(int)$b['ID']);return $rows;
 }
 function em_campaigns(PDO $p):array {
- $stats=[];foreach($p->query("SELECT MessaggioID,COUNT(*) AS Totale,SUM(Stato='inviato') AS Inviate,SUM(Stato IN ('in_corso','da_verificare')) AS Incerte FROM email_invii GROUP BY MessaggioID") as $r)$stats[$r['MessaggioID']]=$r;
+ $stats=[];foreach($p->query("SELECT MessaggioID,COUNT(*) AS Totale,SUM(Stato='inviato') AS Inviate,SUM(Stato IN ('in_corso','da_verificare')) AS Incerte,MAX(InviatoIl) AS UltimoInvio FROM email_invii GROUP BY MessaggioID") as $r)$stats[$r['MessaggioID']]=$r;
  $dest=[];foreach($p->query('SELECT MessaggioID,COUNT(*) AS N FROM email_destinatari GROUP BY MessaggioID') as $r)$dest[$r['MessaggioID']]=(int)$r['N'];
- $out=[];foreach(dc_iter($p,'email_messaggi') as $r){unset($r['HTML'],$r['Testo']);$st=$stats[$r['ID']]??['Totale'=>0,'Inviate'=>0,'Incerte'=>0];$r['Destinatari']=$dest[$r['ID']]??0;$r['Inviate']=(int)$st['Inviate'];$r['Incerte']=(int)$st['Incerte'];$r['StatoEtichetta']=$r['Stato']==='bozza'?'Bozza':($r['Incerte']?'Da verificare':((int)$st['Totale']>0&&$r['Inviate']===(int)$st['Totale']?'Inviata':($r['Inviate']?'Parzialmente inviata':'Elaborata')));$out[]=$r;}
+ $out=[];foreach(dc_iter($p,'email_messaggi') as $r){unset($r['HTML'],$r['Testo']);$st=$stats[$r['ID']]??['Totale'=>0,'Inviate'=>0,'Incerte'=>0,'UltimoInvio'=>null];$r['Destinatari']=$dest[$r['ID']]??0;$r['Inviate']=(int)$st['Inviate'];$r['Incerte']=(int)$st['Incerte'];$r['UltimoInvio']=$st['UltimoInvio']??null;$r['StatoEtichetta']=$r['Stato']==='bozza'?'Bozza':($r['Incerte']?'Da verificare':((int)$st['Totale']>0&&$r['Inviate']===(int)$st['Totale']?'Inviata':($r['Inviate']?'Parzialmente inviata':'Elaborata')));$out[]=$r;}
  usort($out,fn($a,$b)=>(int)$b['ID']<=>(int)$a['ID']);return $out;
 }
 function em_logs(PDO $p,int $id=0):array {
