@@ -5,7 +5,7 @@
   const bytes=new Uint8Array(32);crypto.getRandomValues(bytes);secret.value=[...bytes].map(n=>n.toString(16).padStart(2,'0')).join('');secret.type='text';
  });
  document.getElementById('email-show-secret')?.addEventListener('click',()=>{secret.type=secret.type==='password'?'text':'password';});
- document.querySelectorAll('[data-confirm-action]').forEach(form=>form.addEventListener('submit',event=>{if(!window.confirm(form.dataset.confirmAction))event.preventDefault();}));
+ document.querySelectorAll('[data-confirm-action]').forEach(form=>form.addEventListener('submit',event=>{if(!window.confirm(form.dataset.confirmAction)){event.preventDefault();return;}if(form.hasAttribute('data-confirm-copy-recipients')&&!window.confirm('Copiare anche i nomi dei destinatari nella nuova bozza?'))form.querySelector('[name="copy_recipients"]').value='0';else if(form.hasAttribute('data-confirm-copy-recipients'))form.querySelector('[name="copy_recipients"]').value='1';}));
  const autoScroll=document.getElementById('email-archive-auto-scroll');if(autoScroll){const go=()=>document.getElementById(autoScroll.dataset.scrollTo)?.scrollIntoView({block:'center',behavior:'auto'});if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>requestAnimationFrame(go),{once:true});else requestAnimationFrame(go);setTimeout(go,250);}
  const form=document.getElementById('email-compose');if(!form)return;
  const editable=form.dataset.editable==='1';
