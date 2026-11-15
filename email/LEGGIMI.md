@@ -94,3 +94,11 @@ All'inizio del riquadro Mail il campo Mail salvata elenca tutte le mail, dalla p
 Una bozza rimane modificabile secondo i permessi; una mail elaborata, parzialmente inviata o inviata resta in consultazione, con destinatari congelati. Per riutilizzarla creare una copia dall'archivio. Quando ci sono modifiche non salvate, l'apertura di un'altra mail chiede conferma. La normale scrittura della bozza continua ad aggiornare la mail corrente, anche se nel selettore è stata scelta un'altra voce senza aprirla.
 
 Per questo aggiornamento caricare includes/email_compose.php, assets/email.js e assets/email.css dopo git pull. Nessuna modifica al database o alle credenziali. Le verifiche browser coprono riapertura di una bozza, annullamento dell'apertura con modifiche non salvate, associazione corretta del salvataggio e consultazione delle mail elaborate, anche con dati cifrati.
+
+
+## Voci del menu Servizi
+
+- **Invio mail** apre `/invio_email.php`: messaggio, destinatari e archivio degli invii.
+- **Configurazione mail** apre `/configurazione_mail.php`: ponte Google, mittente, credenziale, lotto e verifica senza spedizione. Accesso riservato ad admin e ghost.
+
+La configurazione non è più una scheda della pagina di invio. Il vecchio collegamento `invio_email.php?tab=config` reindirizza alla pagina autonoma mantenendo i controlli di accesso. Per distribuire la modifica caricare anche il nuovo file `configurazione_mail.php` nella radice del sito, insieme a `invio_email.php` e `includes/layout.php`. Nessuna modifica SQL o alle chiavi private.

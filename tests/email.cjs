@@ -9,7 +9,7 @@ const {chromium}=require('playwright'),{spawn,execFileSync}=require('child_proce
   await page.goto(origin+'/login.php');await page.locator('input[name=nome]').fill('admin');await page.locator('input[name=password]').fill('1234567.');
   await Promise.all([page.waitForURL('**/pannello.php'),page.getByRole('button',{name:'Accedi',exact:true}).click()]);
   await page.goto(origin+'/invio_email.php');
-  check(await page.locator('h1').textContent()==='Gestione email','Titolo email');
+  check(await page.locator('h1').textContent()==='Invio mail','Titolo email');
   await page.locator('.email-contact input:enabled').first().check();
   await page.locator('#email-subject').fill('BOZZA BROWSER');
   await page.locator('#email-editor').fill('Buongiorno {nome}, prova senza spedizione.');
@@ -18,7 +18,13 @@ const {chromium}=require('playwright'),{spawn,execFileSync}=require('child_proce
   await page.getByRole('button',{name:'Chiudi',exact:true}).click();
   await Promise.all([page.waitForURL('**/invio_email.php?tab=componi&id=*&salvato=1'),page.getByRole('button',{name:'Salva bozza e destinatari'}).click()]);
   check((await page.locator('body').textContent()).includes('Salvataggio completato'),'Salvataggio bozza');
+  check(await page.locator('.email-tabs a').filter({hasText:'Configurazione'}).count()===0,'Configurazione ancora nella pagina invio');
+  await page.getByRole('button',{name:'Servizi'}).click();
+  check(await page.getByRole('link',{name:'Invio mail',exact:true}).count()===1,'Voce Invio mail assente');
+  await page.getByRole('link',{name:'Configurazione mail',exact:true}).click();
+  check(new URL(page.url()).pathname==='/configurazione_mail.php'&&await page.locator('h1').textContent()==='Configurazione mail','Pagina configurazione autonoma');
   await page.goto(origin+'/invio_email.php?tab=config');
+  check(new URL(page.url()).pathname==='/configurazione_mail.php','Compatibilità vecchio collegamento');
   await page.locator('#email-generate-secret').click();
   check(/^[a-f0-9]{64}$/.test(await page.locator('#email-secret').inputValue()),'Generazione segreto');
   check(await page.locator('[name=mode],[name=test_email],[name=production_confirm]').count()===0,'Campi della modalità rimossa ancora presenti');
@@ -46,7 +52,11 @@ const {chromium}=require('playwright'),{spawn,execFileSync}=require('child_proce
   const forbidden=await page.request.post(origin+'/invio_email.php',{form:{action:'send',id:'1'}});
   check(forbidden.status()===403,'Invio user lettura ammesso');
   const config=await page.request.get(origin+'/invio_email.php?tab=config');check(config.status()===403,'Configurazione user ammessa');
+  const dedicated=await page.request.get(origin+'/configurazione_mail.php');check(dedicated.status()===403,'Configurazione autonoma user ammessa');
+  const configPost=await page.request.post(origin+'/configurazione_mail.php',{form:{action:'config'}});check(configPost.status()===403,'Modifica configurazione user ammessa');
+  check(await page.locator('a[href="/configurazione_mail.php"]').count()===0,'Menu configurazione visibile a user');
   console.log('OK: pannello email, selezione, editor, bozza, anteprima, configurazione, mobile, conferma solo POST e permessi. Nessun invio reale.');
  }finally{if(browser)await browser.close();server.kill();}
 })().catch(e=>{console.error(e);process.exit(1)});
+
 

@@ -32,7 +32,8 @@ function layout_start(string $title, string $description='', array $context=[]):
   $services=[];
   if(allowed($user,'utenti','scrittura'))$services[]=['label'=>'Utenti','url'=>'/utenti.php'];
   if(allowed($user,'importazione','scrittura'))$services[]=['label'=>'Importazione SQLite','url'=>'/importazione_sqlite/index.php'];
-  if(allowed($user,'gestione_email'))$services[]=['label'=>'Gestione email','url'=>'/invio_email.php'];
+  if(allowed($user,'gestione_email'))$services[]=['label'=>'Invio mail','url'=>'/invio_email.php'];
+  if(in_array($user['Ruolo'],['admin','ghost'],true))$services[]=['label'=>'Configurazione mail','url'=>'/configurazione_mail.php'];
   if(in_array($user['Ruolo'],['admin','ghost'],true))$services[]=['label'=>'Cifratura dati','url'=>'/cifratura_dati.php'];
   if($user['Ruolo']!=='ghost')$services[]=['label'=>'Cambia password','url'=>'/cambia_password.php'];
   if($services)$items[]=['label'=>'Servizi','children'=>$services];
@@ -55,4 +56,5 @@ function layout_start(string $title, string $description='', array $context=[]):
  }
  echo '</ul></nav><main class="page-main"><header class="page-heading"><h1 class="page-title">'.uh($title).'</h1><p class="page-description">'.uh($description).'</p></header>';
 }
+
 

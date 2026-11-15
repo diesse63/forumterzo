@@ -4,12 +4,16 @@ require_once __DIR__.'/includes/auth.php';
 $user=require_access('gestione_email','lettura');
 require_once __DIR__.'/includes/email.php';
 $write=allowed($user,'gestione_email','scrittura');$admin=em_admin($user);
-$tab=(string)($_GET['tab']??'componi');if(!in_array($tab,['componi','registro','config'],true))$tab='componi';
-if($tab==='config'&&!$admin){http_response_code(403);exit('Configurazione riservata agli amministratori.');}
+// Compatibilità con i collegamenti e i moduli aperti prima della separazione.
+if(($_GET['tab']??'')==='config'||($_SERVER['REQUEST_METHOD']==='POST'&&in_array($_POST['action']??'',['config','ping'],true))){
+ if(!$admin){http_response_code(403);exit('Configurazione riservata agli amministratori.');}
+ header('Location: /configurazione_mail.php',true,$_SERVER['REQUEST_METHOD']==='POST'?307:302);exit;
+}
+$tab=(string)($_GET['tab']??'componi');if(!in_array($tab,['componi','registro'],true))$tab='componi';
 $message=$_SESSION['email_flash']??'';unset($_SESSION['email_flash']);$id=(int)($_POST['id']??$_GET['id']??0);$p=poimanager_db();
-try{dc_active($p);}catch(RuntimeException $maintenance){page_start('Gestione email','Servizio temporaneamente in manutenzione.',['Servizi','Gestione email']);echo '<aside>'.em_h($maintenance->getMessage()).'</aside></main></body></html>';exit;}
+try{dc_active($p);}catch(RuntimeException $maintenance){page_start('Invio mail','Servizio temporaneamente in manutenzione.',['Servizi','Invio mail']);echo '<aside>'.em_h($maintenance->getMessage()).'</aside></main></body></html>';exit;}
 if(!em_ready($p)){
- page_start('Gestione email','Messaggi, destinatari e conferme in un archivio dedicato.',['Servizi','Gestione email']);
+ page_start('Invio mail','Messaggi, destinatari e conferme in un archivio dedicato.',['Servizi','Invio mail']);
  echo '<aside>Il modulo email non è ancora installato.</aside>';
  if($admin)echo '<p><a href="/email_installazione.php">Installa le tabelle dedicate</a></p>';
  echo '</main></body></html>';exit;
@@ -17,14 +21,8 @@ if(!em_ready($p)){
 try{
  if($_SERVER['REQUEST_METHOD']==='POST'){
   require_access('gestione_email','scrittura');check_csrf();$action=(string)($_POST['action']??'');
-  if(in_array($action,['config','ping'],true)&&!$admin){http_response_code(403);exit('Operazione riservata agli amministratori.');}
   if($action==='send')em_consume_send_nonce((string)($_POST['send_nonce']??''));
-  if($action==='config'){
-   em_save_config($p,$_POST);header('Location: /invio_email.php?tab=config&salvato=1');exit;
-  }elseif($action==='ping'){
-   $c=em_config($p);if(!$c)throw new RuntimeException('Salvare prima la configurazione.');
-   $r=em_ping($p,$c);$message='Connessione autenticata riuscita. Mittente: '.$r['sender'].' · quota residua: '.(int)$r['quota'].'. Nessuna email inviata.';$tab='config';
-  }elseif($action==='save'){
+  if($action==='save'){
    $input=$_POST;if(!isset($_POST['rich']))$input['html']='<p>'.nl2br(em_h((string)($_POST['text']??''))).'</p>';
    $id=em_save_draft($p,$input);header('Location: /invio_email.php?tab=componi&id='.$id.'&salvato=1');exit;
   }elseif($action==='duplicate'){
@@ -55,13 +53,13 @@ $lists=$tab==='componi'?dc_rows($p,'MailList'):[];usort($lists,fn($a,$b)=>strnat
 if($tab==='registro')$logs=em_logs($p,$id);
 
 $assetVersion=static function(string $path):string{$file=__DIR__.$path;return is_file($file)?substr((@hash_file('sha256',$file)?:'0'),0,12):'0';};
-page_start('Gestione email','Seleziona nominativi, prepara messaggi personali e consulta invii e conferme.',['Servizi','Gestione email']);
+page_start('Invio mail','Seleziona nominativi, prepara messaggi personali e consulta invii e conferme.',['Servizi','Invio mail']);
 ?>
 <link rel="stylesheet" href="/assets/email.css?v=<?=em_h($assetVersion('/assets/email.css'))?>">
 <nav class="email-tabs" aria-label="Sezioni gestione email">
 <a href="/invio_email.php?tab=componi" <?=$tab==='componi'?'aria-current="page"':''?>>Destinatari e messaggio</a>
 <a href="/invio_email.php?tab=registro" <?=$tab==='registro'?'aria-current="page"':''?>>Archivio e invii</a>
-<?php if($admin):?><a href="/invio_email.php?tab=config" <?=$tab==='config'?'aria-current="page"':''?>>Configurazione</a><?php endif;?></nav>
+</nav>
 <?php if($message):?><aside role="status"><?=em_h($message)?></aside><?php endif;if(isset($_GET['salvato'])):?><aside role="status">Salvataggio completato.</aside><?php endif;?>
 <?php if($config):?><p class="email-mode">Configurazione attiva #<?=(int)$config['ID']?> · Mittente <?=em_h($config['Mittente'])?>. Gli invii sono diretti agli indirizzi selezionati nell’anagrafica.</p><?php if($config['Modalita']!=='produzione'):?><aside>Salvare una nuova configurazione prima di preparare nuove campagne.</aside><?php endif;else:?><aside>Configurazione mancante: un amministratore deve collegare il ponte Google.</aside><?php endif;?>
 <?php if($tab==='componi'):?>
@@ -70,9 +68,10 @@ page_start('Gestione email','Seleziona nominativi, prepara messaggi personali e 
 <?php require __DIR__.'/includes/email_archivio.php';?>
 <div class="email-table-scroll"><table><tr><th>Messaggio</th><th>Destinatario</th><th>Indirizzo effettivo</th><th>Stato</th><th>Invio UTC</th><th>Conferma UTC</th></tr>
 <?php foreach($logs as $r):?><tr><td><?=em_h($r['Oggetto'])?></td><td><?=em_h($r['Nome'])?><small><?=em_h($r['Email'])?></small></td><td><?=em_h($r['EmailEffettiva'])?></td><td><?=em_h($r['Stato'])?><small><?=em_h($r['Nota'])?></small></td><td><?=em_h($r['InviatoIl']??'—')?></td><td><?=em_h($r['ConfermatoIl']??'—')?></td></tr><?php endforeach;?></table></div>
-<?php else:require __DIR__.'/includes/email_config_form.php';endif;?>
+<?php endif;?>
 <script src="/assets/email_destinatari.js?v=<?=em_h($assetVersion('/assets/email_destinatari.js'))?>" defer></script>
 <script src="/assets/email.js?v=<?=em_h($assetVersion('/assets/email.js'))?>" defer></script></main></body></html>
+
 
 
 
