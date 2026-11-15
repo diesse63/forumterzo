@@ -5,7 +5,6 @@ usort($archive,fn($a,$b)=>strcmp((string)($b['CreatoIl']??''),(string)($a['Creat
 $stateCounts=array_fill_keys(['Bozza','Elaborata','Parzialmente inviata','Inviata','Da verificare'],0);foreach($archive as $campaign)$stateCounts[$campaign['StatoEtichetta']]++;
 $pending=array_values(array_filter($archive,fn($r)=>$r['StatoEtichetta']!=='Inviata'));
 $selected=null;$selectedId=(int)($_GET['id']??0);foreach($archive as $campaign)if((int)$campaign['ID']===$selectedId){$selected=$campaign;break;}
-if(!$selected){foreach($archive as $campaign)if(($campaign['UltimoInvio']??'')!==''&&(!$selected||strcmp((string)$campaign['UltimoInvio'],(string)$selected['UltimoInvio'])>0))$selected=$campaign;}
 if(!$selected)$selected=$archive[0]??null;
 $pages=max(1,(int)ceil(count($archive)/20));$defaultPage=$selected?intdiv((int)(array_search($selected,$archive,true)?:0),20)+1:1;$page=max(1,min($pages,(int)($_GET['archivio_pagina']??$defaultPage)));$visible=array_slice($archive,($page-1)*20,20);
 ?>
