@@ -32,7 +32,7 @@ function layout_start(string $title, string $description='', array $context=[]):
   $services=[];
   if(allowed($user,'utenti','scrittura'))$services[]=['label'=>'Utenti','url'=>'/utenti.php'];
   if(allowed($user,'importazione','scrittura'))$services[]=['label'=>'Importazione SQLite','url'=>'/importazione_sqlite/index.php'];
-  if(allowed($user,'gestione_email'))$services[]=['label'=>'Gestione email','url'=>'/gestione_email.php'];
+  if(allowed($user,'gestione_email'))$services[]=['label'=>'Gestione email','url'=>'/invio_email.php'];
   if(in_array($user['Ruolo'],['admin','ghost'],true))$services[]=['label'=>'Cifratura dati','url'=>'/cifratura_dati.php'];
   if($user['Ruolo']!=='ghost')$services[]=['label'=>'Cambia password','url'=>'/cambia_password.php'];
   if($services)$items[]=['label'=>'Servizi','children'=>$services];

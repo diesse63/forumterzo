@@ -13,7 +13,7 @@ I nuovi dati email non vengono inseriti in Mail/MailList/ListaMail. La sola regi
 ## 1. Aggiorna Altervista
 
 Eseguire git pull e trasferire con WinSCP:
-- gestione_email.php, email_installazione.php, email_conferma.php nella radice;
+- invio_email.php, email_installazione.php, email_conferma.php nella radice;
 - includes/email.php, includes/email_http.php, includes/email_config_form.php, includes/layout.php;
 - pannello.php, assets/email.css, assets/email.js;
 - cartella email con .htaccess e migrazione_v1.sql. Il file Bridge.gs può restare sul PC: serve per Google.
@@ -83,3 +83,23 @@ Non sono previsti invio pianificato, allegati, editor di rubrica separata o ripr
 
 CI: MySQL effimero e trasporto simulato, nessuna email reale; controlli su schema dedicato, anagrafiche immutate, sanitizzazione, bozze, copie destinatari, configurazioni versionate, isolamento TEST, lotti, firme/redirect, esiti incerti, nonce e conferme. Il ponte Apps Script viene eseguito in un ambiente simulato con MailApp fittizio. Il browser verifica editor, filtri, anteprima, salvataggio, mobile e permessi.
 Restano da eseguire dal proprietario: deployment Google, Test connessione sul server Altervista e singolo invio di prova autorizzato. Nessuna configurazione Gmail reale è stata inventata, nessun deployment Google è stato creato durante questa consegna.
+
+## Prova con un indirizzo presente nel database
+
+La modalità TEST legge i destinatari dal database ma invia soltanto all'indirizzo Destinatario di prova. Per verificare una consegna all'indirizzo effettivamente selezionato nella rubrica:
+
+1. Aprire /invio_email.php?tab=config come amministratore e impostare Produzione — destinatari reali, confermando l'uso dei destinatari reali. Impostare Dimensione lotto a 1 e salvare una nuova versione. Lasciare vuota la credenziale per conservarla se il ponte/account non cambiano.
+2. Premere Test connessione — nessuna email e attendere la conferma di connessione autenticata. Il test non spedisce messaggi.
+3. Aprire Destinatari e messaggio > Nuovo messaggio. Premere Nessuno, cercare un indirizzo di prova presente in rubrica e selezionare soltanto quello. Non usare una campagna già preparata in TEST: manterrebbe il vecchio destinatario effettivo.
+4. Scrivere un oggetto riconoscibile, per esempio PROVA INVIO DAL GESTIONALE, e il testo. Premere Salva bozza e destinatari.
+5. Controllare che la bozza contenga un solo destinatario. Confermare e premere Prepara campagna senza inviare.
+6. In Invii e conferme verificare che la campagna usi la nuova configurazione in produzione e che Indirizzo effettivo sia quello selezionato. Confermare l'invio e premere Invia prossimo lotto.
+7. Verificare stato inviato, ricezione nella casella (anche Spam) e presenza in Posta inviata dell'account Google mittente. Inviato significa che il ponte ha accettato la spedizione, non garantisce il recapito.
+8. Aprire il link ricevuto e premere Confermo la lettura; aggiornare il registro per verificare la data di conferma. Aprire soltanto il link non registra una conferma.
+9. Se si desidera tornare alle prove isolate, salvare una nuova configurazione in TEST. Le campagne già preparate restano associate alla loro configurazione originale: non cambiano modalità automaticamente.
+
+Per provare solo il collegamento Gmail senza coinvolgere gli indirizzi della rubrica, lasciare TEST e usare Invia email di prova dalla configurazione. Nessuna email viene inviata aggiornando il codice o eseguendo i test automatici.
+
+### Distribuzione della rinomina
+
+Dopo git pull --ff-only caricare invio_email.php, email_installazione.php, pannello.php e includes/layout.php con WinSCP. Eliminare manualmente dal server il vecchio file gestione_email.php; mantenere disattivata l'eliminazione automatica. Il codice permesso gestione_email, le tabelle, le configurazioni, le campagne e i link pubblici email_conferma.php non cambiano. Nessuna migrazione SQL e nessun aggiornamento del deployment Google richiesti per la sola rinomina.

@@ -15,9 +15,9 @@ const {chromium}=require('playwright'),{spawn}=require('child_process'),fs=requi
   await page.locator('#ente-name').fill('BROWSER CIFRATO');await page.locator('#ente-type').selectOption('100');
   await Promise.all([page.waitForURL('**/anagrafica_singola.php?*'),page.getByRole('button',{name:'Salva ente',exact:true}).click()]);
   check((await page.locator('body').textContent()).includes('BROWSER CIFRATO'),'Scrittura cifrata browser');
-  await page.goto(base+'/gestione_email.php');
+  await page.goto(base+'/invio_email.php');
   await page.locator('.email-contact input:enabled').first().check();await page.locator('#email-subject').fill('BOZZA CIFRATA BROWSER');await page.locator('#email-editor').fill('Testo cifrato {nome}');
-  await Promise.all([page.waitForURL('**/gestione_email.php?tab=componi&id=*&salvato=1'),page.getByRole('button',{name:'Salva bozza e destinatari'}).click()]);
+  await Promise.all([page.waitForURL('**/invio_email.php?tab=componi&id=*&salvato=1'),page.getByRole('button',{name:'Salva bozza e destinatari'}).click()]);
   check(await page.locator('#email-subject').inputValue()==='BOZZA CIFRATA BROWSER','Rilettura bozza cifrata');
   const key='private/dati_security.php',hold=key+'.test-hold';
   fs.renameSync(key,hold);

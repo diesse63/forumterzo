@@ -12,4 +12,4 @@ if($message)echo '<aside>'.em_h($message).'</aside>';
 ?>
 <p>La procedura non importa né modifica enti, persone, indirizzi o liste esistenti. È rieseguibile sulle tabelle email compatibili.</p>
 <form method="post"><input type="hidden" name="csrf" value="<?=em_h(csrf())?>"><label><input type="checkbox" name="backup" required> Ho eseguito il backup del database.</label><button>Installa le tabelle dedicate</button></form>
-<p><a href="/gestione_email.php">Apri Gestione email</a></p></main></body></html>
+<p><a href="/invio_email.php">Apri Gestione email</a></p></main></body></html>

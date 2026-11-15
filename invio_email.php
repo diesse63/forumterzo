@@ -20,7 +20,7 @@ try{
   if(in_array($action,['config','ping','testmail'],true)&&!$admin){http_response_code(403);exit('Operazione riservata agli amministratori.');}
   if(in_array($action,['send','testmail'],true))em_consume_send_nonce((string)($_POST['send_nonce']??''));
   if($action==='config'){
-   em_save_config($p,$_POST);header('Location: /gestione_email.php?tab=config&salvato=1');exit;
+   em_save_config($p,$_POST);header('Location: /invio_email.php?tab=config&salvato=1');exit;
   }elseif($action==='ping'){
    $c=em_config($p);if(!$c)throw new RuntimeException('Salvare prima la configurazione.');
    $r=em_ping($p,$c);$message='Connessione autenticata riuscita. Mittente: '.$r['sender'].' · quota residua: '.(int)$r['quota'].'. Nessuna email inviata.';$tab='config';
@@ -30,7 +30,7 @@ try{
    $id=em_test_message($p,$c);$r=em_send_batch($p,$id);$tab='registro';$message='Prova: inviate '.$r['sent'].'. '.$r['notice'];
   }elseif($action==='save'){
    $input=$_POST;if(!isset($_POST['rich']))$input['html']='<p>'.nl2br(em_h((string)($_POST['text']??''))).'</p>';
-   $id=em_save_draft($p,$input);header('Location: /gestione_email.php?tab=componi&id='.$id.'&salvato=1');exit;
+   $id=em_save_draft($p,$input);header('Location: /invio_email.php?tab=componi&id='.$id.'&salvato=1');exit;
   }elseif($action==='prepare'){
    if(!isset($_POST['confirm']))throw new RuntimeException('Confermare il blocco di testo e destinatari.');
    $count=em_prepare($p,$id);$message='Campagna preparata per '.$count.' destinatari. Nessuna email spedita: confermare il lotto dal registro.';$tab='registro';
@@ -40,7 +40,7 @@ try{
   }elseif($action==='status'){
    $n=em_reconcile($p,$id);$message='Esiti recuperati dal ponte: '.$n.'. Gli esiti ancora incerti non vengono ritentati.';$tab='registro';
   }else throw new RuntimeException('Operazione non valida.');
-  $_SESSION['email_flash']=$message;header('Location: /gestione_email.php?tab='.urlencode($tab).'&id='.$id);exit;
+  $_SESSION['email_flash']=$message;header('Location: /invio_email.php?tab='.urlencode($tab).'&id='.$id);exit;
  }
 }catch(Throwable $e){
  $message=$e instanceof PDOException?'Operazione email non completata. Verificare le tabelle dedicate e riprovare senza duplicare invii con esito incerto.':$e->getMessage();
@@ -58,14 +58,14 @@ page_start('Gestione email','Seleziona nominativi, prepara messaggi personali e 
 ?>
 <link rel="stylesheet" href="/assets/email.css">
 <nav class="email-tabs" aria-label="Sezioni gestione email">
-<a href="/gestione_email.php?tab=componi" <?=$tab==='componi'?'aria-current="page"':''?>>Destinatari e messaggio</a>
-<a href="/gestione_email.php?tab=registro" <?=$tab==='registro'?'aria-current="page"':''?>>Invii e conferme</a>
-<?php if($admin):?><a href="/gestione_email.php?tab=config" <?=$tab==='config'?'aria-current="page"':''?>>Configurazione</a><?php endif;?></nav>
+<a href="/invio_email.php?tab=componi" <?=$tab==='componi'?'aria-current="page"':''?>>Destinatari e messaggio</a>
+<a href="/invio_email.php?tab=registro" <?=$tab==='registro'?'aria-current="page"':''?>>Invii e conferme</a>
+<?php if($admin):?><a href="/invio_email.php?tab=config" <?=$tab==='config'?'aria-current="page"':''?>>Configurazione</a><?php endif;?></nav>
 <?php if($message):?><aside role="status"><?=em_h($message)?></aside><?php endif;if(isset($_GET['salvato'])):?><aside role="status">Salvataggio completato.</aside><?php endif;?>
 <?php if($config):?><p class="email-mode">Configurazione attiva #<?=(int)$config['ID']?> · <?=em_h($config['Modalita'])?> · Mittente <?=em_h($config['Mittente'])?><?php if($config['Modalita']==='test'):?> · Le nuove campagne saranno inviate soltanto a <strong><?=em_h($config['EmailTest'])?></strong><?php endif;?></p><?php else:?><aside>Configurazione mancante: un amministratore deve collegare il ponte Google.</aside><?php endif;?>
 <?php if($tab==='componi'):?>
-<section class="email-card"><h2>Bozze e messaggi</h2><form method="get" class="email-row"><input type="hidden" name="tab" value="componi"><label>Messaggio<select name="id"><option value="0">Nuovo messaggio</option><?php foreach($campaigns as $m):?><option value="<?=(int)$m['ID']?>" <?=(int)$m['ID']===$id?'selected':''?>>#<?=(int)$m['ID']?> · <?=em_h($m['Oggetto'])?> · <?=em_h($m['Stato'])?></option><?php endforeach;?></select></label><button>Apri</button><a href="/gestione_email.php?tab=componi">Nuovo messaggio</a></form></section>
-<?php if($frozen):?><aside>Messaggio preparato: testo e destinatari sono bloccati. <a href="/gestione_email.php?tab=registro&id=<?=$id?>">Apri il registro per inviare</a>. Per modificarlo crea un nuovo messaggio.</aside><?php endif;?>
+<section class="email-card"><h2>Bozze e messaggi</h2><form method="get" class="email-row"><input type="hidden" name="tab" value="componi"><label>Messaggio<select name="id"><option value="0">Nuovo messaggio</option><?php foreach($campaigns as $m):?><option value="<?=(int)$m['ID']?>" <?=(int)$m['ID']===$id?'selected':''?>>#<?=(int)$m['ID']?> · <?=em_h($m['Oggetto'])?> · <?=em_h($m['Stato'])?></option><?php endforeach;?></select></label><button>Apri</button><a href="/invio_email.php?tab=componi">Nuovo messaggio</a></form></section>
+<?php if($frozen):?><aside>Messaggio preparato: testo e destinatari sono bloccati. <a href="/invio_email.php?tab=registro&id=<?=$id?>">Apri il registro per inviare</a>. Per modificarlo crea un nuovo messaggio.</aside><?php endif;?>
 <form method="post" id="email-compose" data-editable="<?=$editable?'1':'0'?>">
 <input type="hidden" name="csrf" value="<?=em_h(csrf())?>"><input type="hidden" name="action" value="save"><input type="hidden" name="id" value="<?=$id?>"><input type="hidden" name="version" value="<?=(int)($draft['Versione']??0)?>">
 <div class="email-grid"><section class="email-card"><h2>Destinatari <span id="email-count"></span></h2>
@@ -94,7 +94,7 @@ page_start('Gestione email','Seleziona nominativi, prepara messaggi personali e 
 <?php elseif($tab==='registro'):?>
 <section class="email-card"><h2>Campagne</h2><p>Ogni lotto invia al massimo 20 email, entro la quota restituita da Google. Una conferma volontaria non è una ricevuta automatica di lettura o consegna.</p>
 <?php foreach($campaigns as $m):if($m['Stato']!=='preparato')continue;$c=em_config($p,(int)$m['ConfigID']);?>
-<article class="email-campaign"><h3>#<?=(int)$m['ID']?> · <?=em_h($m['Oggetto'])?></h3><p>Configurazione #<?=(int)$m['ConfigID']?> · <?=em_h($c['Modalita'])?> · <?=em_h($c['Mittente'])?></p><a href="/gestione_email.php?tab=registro&id=<?=(int)$m['ID']?>">Mostra destinatari e conferme</a>
+<article class="email-campaign"><h3>#<?=(int)$m['ID']?> · <?=em_h($m['Oggetto'])?></h3><p>Configurazione #<?=(int)$m['ConfigID']?> · <?=em_h($c['Modalita'])?> · <?=em_h($c['Mittente'])?></p><a href="/invio_email.php?tab=registro&id=<?=(int)$m['ID']?>">Mostra destinatari e conferme</a>
 <?php if($write):?><form method="post"><input type="hidden" name="csrf" value="<?=em_h(csrf())?>"><input type="hidden" name="id" value="<?=(int)$m['ID']?>"><input type="hidden" name="action" value="send"><input type="hidden" name="send_nonce" value="<?=em_h(em_send_nonce())?>"><label><input type="checkbox" name="confirm" required> Confermo l’invio del prossimo lotto <?=$c['Modalita']==='test'?'soltanto al destinatario di prova '.em_h($c['EmailTest']):'ai destinatari reali di questa campagna'?>.</label><button>Invia prossimo lotto</button></form>
 <form method="post"><input type="hidden" name="csrf" value="<?=em_h(csrf())?>"><input type="hidden" name="id" value="<?=(int)$m['ID']?>"><input type="hidden" name="action" value="status"><button>Verifica esiti senza reinviare</button></form><?php endif;?></article><?php endforeach;?></section>
 <div class="email-table-scroll"><table><tr><th>Messaggio</th><th>Destinatario</th><th>Indirizzo effettivo</th><th>Stato</th><th>Invio UTC</th><th>Conferma UTC</th></tr>
