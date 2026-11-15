@@ -32,7 +32,7 @@ try{
    $source=dc_find($p,'email_messaggi',['ID'=>$id]);$subject=(string)($source['Oggetto']??'(Senza oggetto)');em_delete($p,$id,(int)($_POST['version']??0));$id=0;$tab='registro';$message='Lista “'.$subject.'” eliminata dal gestionale. Le email già spedite non sono state ritirate.';
   }elseif($action==='prepare'){
    if(!isset($_POST['confirm']))throw new RuntimeException('Confermare il blocco di testo e destinatari.');
-   $count=em_prepare($p,$id);$message='Campagna preparata per '.$count.' destinatari. Nessuna email spedita: confermare il lotto dal registro.';$tab='registro';
+   $count=em_prepare($p,$id);$message='Elaborazione completata: lista preparata per '.$count.' destinatari. Nessuna email è stata ancora spedita.';$tab='registro';
   }elseif($action==='send'){
    if(!isset($_POST['confirm']))throw new RuntimeException('Confermare l’invio del lotto.');
    $r=em_send_batch($p,$id);$message='Inviate nel lotto: '.$r['sent'].'. '.$r['notice'];$tab='registro';
