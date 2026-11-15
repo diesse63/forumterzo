@@ -3,7 +3,6 @@ $initial=[];$wanted=array_fill_keys($selected,true);
 if($frozen){foreach($dest as $d)$initial[]=['ID'=>(int)$d['MailOrigineID'],'Nome'=>$d['Nome'],'Indirizzo'=>$d['Email'],'Ente'=>$d['Ente'],'Ruolo'=>['REFERENTE'=>'LR','ALTRO'=>'AS','ASSOCIAZIONE'=>'ENTE'][$d['Tipo']]??$d['Tipo']];}
 else{foreach($contacts as $c)if(isset($wanted[(int)$c['ID']]))$initial[$c['Indirizzo']]=$c;$initial=array_values($initial);}
 ?>
-<div class="email-start"><p>Puoi iniziare dal messaggio oppure dai destinatari e salvare una bozza anche incompleta.</p><a href="#email-message-card" data-email-focus="email-subject">Prepara prima la mail</a><a href="#email-address-card" data-email-focus="email-search">Seleziona prima i nominativi</a><a href="/invio_email.php?tab=componi">Nuovo messaggio</a></div>
 <?php if(isset($_GET['duplicato'])):?><aside role="status">Copia creata come nuova bozza, senza invii o conferme. Gli eventuali destinatari sono stati riletti dalla rubrica attuale.</aside><?php endif;?>
 <?php if($frozen):?><aside>Mail già elaborata: contenuto e destinatari dell’invio sono congelati. La rubrica resta aggiornata; per apportare modifiche duplica la mail dall’archivio.</aside><?php endif;?>
 <form method="get" id="email-open-saved" action="/invio_email.php"><input type="hidden" name="tab" value="componi"></form>
