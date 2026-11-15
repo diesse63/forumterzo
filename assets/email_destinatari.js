@@ -9,21 +9,23 @@ window.initEmailRecipients=(form,editable)=>{
  const baseline=signature();
  function visible(){
   const q=controls.search.value.trim().toLocaleLowerCase(),type=controls.type.value,list=controls.list.value,role=controls.role.value;
-  return book.filter(c=>(!q||[c.Nome,c.Ente,c.Indirizzo,...c.Riferimenti.map(p=>p.nome)].join(' ').toLocaleLowerCase().includes(q))&&(!type||String(c.ID_TIPOLOGIA)===type)&&(!list||c.Liste.some(n=>String(n)===list))&&(!role||c.Ruolo===role)).sort((a,b)=>controls.view.value==='enti'?(a.Ente.localeCompare(b.Ente,'it')||a.Nome.localeCompare(b.Nome,'it')):a.Nome.localeCompare(b.Nome,'it'));
+  return book.filter(c=>(!q||[c.Nome,c.Ente,c.Indirizzo].join(' ').toLocaleLowerCase().includes(q))&&(!type||String(c.ID_TIPOLOGIA)===type)&&(!list||c.Liste.some(n=>String(n)===list))&&(!role||c.Ruolo===role)).sort((a,b)=>controls.view.value==='enti'?(a.Ente.localeCompare(b.Ente,'it')||a.Nome.localeCompare(b.Nome,'it')):a.Nome.localeCompare(b.Nome,'it'));
  }
  function render(){
   container.replaceChildren();chosen.replaceChildren();inputs.replaceChildren();count.textContent='('+selected.size+' indirizzi)';
-  const rows=visible();let lastEntity=null,group=container;
+  const rows=visible();const resultCount=document.getElementById('email-results-count');if(resultCount)resultCount.textContent=rows.length+' righe con email';let lastEntity=null,group=container;
   for(const c of rows){
    if(controls.view.value==='enti'&&lastEntity!==c.EnteID){
-    group=element('section',undefined,'email-entity-group');group.append(element('h3',c.Ente));group.append(element('p',c.Riferimenti.map(p=>p.nome+' · '+p.ruolo).join(' — ')||'Nessun riferimento LR/AS registrato.','email-muted'));container.append(group);lastEntity=c.EnteID;
+    group=element('section',undefined,'email-entity-group');group.append(element('h3',c.Ente));container.append(group);lastEntity=c.EnteID;
    }
    const key=c.Indirizzo.toLowerCase().trim(),existing=selected.get(key),duplicate=existing&&Number(existing.ID)!==Number(c.ID),label=element('label',undefined,'email-contact');
    label.dataset.email=key;label.classList.toggle('is-selected',Boolean(existing));label.classList.toggle('is-duplicate-selected',Boolean(duplicate));
    const box=element('input');box.type='checkbox';box.value=c.ID;box.checked=Boolean(existing);box.disabled=!editable||Boolean(duplicate);box.setAttribute('aria-label',c.Nome+' · '+c.Ruolo+' · '+c.Indirizzo);
    box.addEventListener('change',()=>{if(box.checked)selected.set(key,c);else selected.delete(key);render();});
-   const body=element('span');body.append(element('strong',c.Nome+' · '+c.Ruolo),element('small',c.Indirizzo+(Number(c.PEC)?' · PEC':'')),element('small','Ente: '+c.Ente));
-   if(c.Ruolo==='ENTE')body.append(element('small',c.Riferimenti.map(p=>p.nome+' ('+p.ruolo+')').join(' · ')));
+   const body=element('span');
+   if(controls.view.value==='enti')body.append(element('strong',c.Ente),element('small',c.Ruolo==='ENTE'?'Indirizzo generale dell’ente':c.Nome+' · '+c.Ruolo,'email-person-reference'));
+   else body.append(element('strong',c.Nome+' · '+c.Ruolo),element('small','Ente: '+c.Ente));
+   body.append(element('small',c.Indirizzo+(Number(c.PEC)?' · PEC':''),'email-address-value'));
    if(existing)body.append(element('small',duplicate?'Indirizzo già selezionato con '+existing.Nome:'Selezionato','email-selected-badge'));
    label.append(box,body);group.append(label);
   }
@@ -36,22 +38,27 @@ window.initEmailRecipients=(form,editable)=>{
   }
   chosen.append(selected.size?list:element('p','Nessun indirizzo selezionato.'));
  }
- Object.entries(controls).forEach(([k,c])=>c.addEventListener(k==='search'?'input':'change',render));
+ let refreshTimer;
+ const filtersChanged=()=>{render();clearTimeout(refreshTimer);refreshTimer=setTimeout(refresh,300);};
+ Object.entries(controls).forEach(([k,c])=>c.addEventListener(k==='search'?'input':'change',filtersChanged));
  document.getElementById('email-all')?.addEventListener('click',()=>{for(const c of visible()){const key=c.Indirizzo.toLowerCase().trim();if(!selected.has(key))selected.set(key,c);}render();});
  document.getElementById('email-none')?.addEventListener('click',()=>{selected.clear();render();});
- let busy=false,lastRefresh=Date.now();
+ let busy=false,queued=false,lastRefresh=Date.now();
  async function refresh(){
-  if(busy)return;busy=true;document.getElementById('email-refresh').disabled=true;
+  if(busy){queued=true;return;}busy=true;document.getElementById('email-refresh').disabled=true;
   try{
    const response=await fetch('/email_rubrica.php',{credentials:'same-origin',cache:'no-store'});if(new URL(response.url).pathname==='/login.php'){location.assign('/login.php');return;}
    if(!response.ok)throw Error('Rubrica non disponibile');const data=await response.json();if(!Array.isArray(data.contacts))throw Error('Risposta rubrica non valida');book=data.contacts;
+   const syncOptions=(control,items,title,key,label)=>{if(!Array.isArray(items))return;const value=control.value;control.replaceChildren();const all=element('option',title);all.value='';control.append(all);for(const item of items){const option=element('option',item[label]);option.value=String(item[key]);control.append(option);}control.value=items.some(item=>String(item[key])===value)?value:'';};
+   syncOptions(controls.type,data.tipologie,'Tutte','ID','Tipologia');syncOptions(controls.list,data.liste,'Tutte','ID','Descrizione');
    let removed=0;
    if(!frozen){const byId=new Map(book.map(c=>[Number(c.ID),c])),fresh=new Map();for(const old of selected.values()){const current=byId.get(Number(old.ID));if(current){if(!fresh.has(current.Indirizzo))fresh.set(current.Indirizzo,current);}else removed++;}selected=fresh;}
    render();lastRefresh=Date.now();status.textContent='Rubrica aggiornata alle '+new Date().toLocaleTimeString('it-IT')+'.'+(removed?' '+removed+' selezioni rimosse perché non più presenti o valide.':'');
   }catch{status.textContent='Aggiornamento non riuscito. Premi Aggiorna rubrica prima di confermare i destinatari.';}
-  finally{busy=false;document.getElementById('email-refresh').disabled=false;}
+  finally{busy=false;document.getElementById('email-refresh').disabled=false;if(queued){queued=false;queueMicrotask(refresh);}}
  }
  document.getElementById('email-refresh').addEventListener('click',refresh);
- setInterval(()=>{if(!document.hidden)refresh();},30000);window.addEventListener('focus',()=>{if(Date.now()-lastRefresh>5000)refresh();});
+ setInterval(()=>{if(!document.hidden)refresh();},5000);window.addEventListener('focus',()=>{if(Date.now()-lastRefresh>1000)refresh();});
  render();return {values:()=>[...selected.values()],hasChanged:()=>signature()!==baseline};
 };
+

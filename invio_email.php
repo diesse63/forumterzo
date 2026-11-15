@@ -54,9 +54,10 @@ $tipi=$tab==='componi'?dc_rows($p,'Tipologia'):[];usort($tipi,fn($a,$b)=>strnatc
 $lists=$tab==='componi'?dc_rows($p,'MailList'):[];usort($lists,fn($a,$b)=>strnatcasecmp($a['Descrizione'],$b['Descrizione']));
 if($tab==='registro')$logs=em_logs($p,$id);
 
+$assetVersion=static function(string $path):string{$file=__DIR__.$path;return is_file($file)?substr(hash_file('sha256',$file),0,12):'0';};
 page_start('Gestione email','Seleziona nominativi, prepara messaggi personali e consulta invii e conferme.',['Servizi','Gestione email']);
 ?>
-<link rel="stylesheet" href="/assets/email.css">
+<link rel="stylesheet" href="/assets/email.css?v=<?=em_h($assetVersion('/assets/email.css'))?>">
 <nav class="email-tabs" aria-label="Sezioni gestione email">
 <a href="/invio_email.php?tab=componi" <?=$tab==='componi'?'aria-current="page"':''?>>Destinatari e messaggio</a>
 <a href="/invio_email.php?tab=registro" <?=$tab==='registro'?'aria-current="page"':''?>>Archivio e invii</a>
@@ -70,7 +71,8 @@ page_start('Gestione email','Seleziona nominativi, prepara messaggi personali e 
 <div class="email-table-scroll"><table><tr><th>Messaggio</th><th>Destinatario</th><th>Indirizzo effettivo</th><th>Stato</th><th>Invio UTC</th><th>Conferma UTC</th></tr>
 <?php foreach($logs as $r):?><tr><td><?=em_h($r['Oggetto'])?></td><td><?=em_h($r['Nome'])?><small><?=em_h($r['Email'])?></small></td><td><?=em_h($r['EmailEffettiva'])?></td><td><?=em_h($r['Stato'])?><small><?=em_h($r['Nota'])?></small></td><td><?=em_h($r['InviatoIl']??'—')?></td><td><?=em_h($r['ConfermatoIl']??'—')?></td></tr><?php endforeach;?></table></div>
 <?php else:require __DIR__.'/includes/email_config_form.php';endif;?>
-<script src="/assets/email_destinatari.js" defer></script>
-<script src="/assets/email.js" defer></script></main></body></html>
+<script src="/assets/email_destinatari.js?v=<?=em_h($assetVersion('/assets/email_destinatari.js'))?>" defer></script>
+<script src="/assets/email.js?v=<?=em_h($assetVersion('/assets/email.js'))?>" defer></script></main></body></html>
+
 
 
