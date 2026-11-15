@@ -26,7 +26,7 @@ try{
    $input=$_POST;if(!isset($_POST['rich']))$input['html']='<p>'.nl2br(em_h((string)($_POST['text']??''))).'</p>';
    $id=em_save_draft($p,$input);header('Location: /invio_email.php?tab=componi&id='.$id.'&salvato=1');exit;
   }elseif($action==='duplicate'){
-   $id=em_duplicate($p,$id,isset($_POST['copy_recipients']));header('Location: /invio_email.php?tab=componi&id='.$id.'&salvato=1&duplicato=1');exit;
+   $id=em_duplicate($p,$id,isset($_POST['copy_recipients']));$message='Lista duplicata come nuova bozza.';$tab=($_POST['return_tab']??'')==='registro'?'registro':'componi';
   }elseif($action==='delete'){
    if(!isset($_POST['confirm']))throw new RuntimeException('Confermare l’eliminazione della mail e del relativo registro.');
    em_delete($p,$id,(int)($_POST['version']??0));$id=0;$tab='registro';$message='Mail eliminata dal gestionale. Le email già spedite non sono state ritirate.';
