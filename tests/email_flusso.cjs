@@ -26,8 +26,8 @@ const {chromium}=require('playwright'),{spawn,execFileSync}=require('child_proce
   await page.locator('#email-search').fill('FLUSSO BROWSER '+tag);await page.locator('#email-type').selectOption('101');check(await page.locator('.email-contact:visible').count()===0,'Tipologia non filtra in tempo reale');await page.locator('#email-type').selectOption('100');check(await page.locator('.email-contact:visible').count()===2,'Tipologia non ripristina righe');
   await page.locator('#email-address-card').scrollIntoViewIfNeeded();const bookBox=await page.locator('#email-address-card').boundingBox(),selectionBox=await page.locator('#email-selection-card').boundingBox();check(Math.abs(bookBox.y-selectionBox.y)<4&&selectionBox.x>bookBox.x,'Riquadri disallineati durante lo scroll');
   check(await page.locator('script[src^="/assets/email_destinatari.js?v="]').count()===1,'Script senza versione cache');
-  const chosen=await page.locator('#email-selection-inputs input').inputValue();await page.locator('#email-editor').fill('');await Promise.all([page.waitForURL('**/invio_email.php?tab=componi&id=*&salvato=1'),page.getByRole('button',{name:'Salva bozza e destinatari'}).click()]);
-  check(await page.locator('#email-subject').inputValue()==='','Destinatari senza testo non salvabili');
+  const chosen=await page.locator('#email-selection-inputs input').inputValue();await page.locator('#email-subject').fill('DESTINATARI BROWSER '+tag);await page.locator('#email-editor').fill('Contenuto iniziale');await Promise.all([page.waitForURL('**/invio_email.php?tab=componi&id=*&salvato=1'),page.getByRole('button',{name:'Salva bozza e destinatari'}).click()]);
+  check(await page.locator('#email-subject').inputValue()==='DESTINATARI BROWSER '+tag,'Bozza con contenuto e destinatari non salvata');
   await page.locator('#email-subject').fill('MAIL FLUSSO BROWSER '+tag);await page.locator('#email-editor').fill('Testo conservato durante aggiornamento');
   const code="require 'includes/database.php';require 'includes/dati.php';$p=poimanager_db();$m=dc_find($p,'Mail',['ID'=>(int)$argv[1]]);dc_update($p,'Mail',['ID'=>$m['ID']],['Indirizzo'=>$argv[2]]);dc_update($p,'Soggetti',['ID'=>$m['IDSoggetto']],['Nome'=>$argv[3]]);";
   const live='live.'+tag.toLowerCase()+'@example.invalid',updated='auto.'+tag.toLowerCase()+'@example.invalid',name='NUOVO COGNOME NOME '+tag;execFileSync('php',['-r',code,chosen,live,name]);
@@ -45,5 +45,6 @@ const {chromium}=require('playwright'),{spawn,execFileSync}=require('child_proce
   console.log('OK: flusso browser '+tag+', ordine libero, layout, deduplica, nomi/enti, rubrica viva, copie, eliminazione, mobile e permessi. Nessuna spedizione.');
  }finally{if(browser)await browser.close();server.kill();}
 })().catch(e=>{console.error(e);process.exit(1)});
+
 
 

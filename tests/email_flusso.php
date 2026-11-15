@@ -17,9 +17,13 @@ $book=em_address_book($p);$ids=array_column($book,'ID');ef_check(in_array($first
 $row=array_values(array_filter($book,fn($r)=>(int)$r['ID']===$first))[0];ef_check($row['Ruolo']==='LR'&&$row['Ente']==='FLUSSO BROWSER '.$tag&&count($row['Riferimenti'])===3,'Riferimenti nominativo/ente');
 $messageOnly=em_save_draft($p,['subject'=>'SOLO TESTO '.$tag,'text'=>'Contenuto','html'=>'<p>Contenuto</p>']);
 ef_bad(fn()=>em_prepare($p,$messageOnly),'Invio senza destinatari ammesso');
-$peopleOnly=em_save_draft($p,['mail_ids'=>[$first,$second]]);
+$beforeDrafts=count(dc_rows($p,'email_messaggi'));
+foreach([[],['subject'=>'Solo oggetto'],['text'=>'Solo testo']] as $incomplete){
+ ef_bad(fn()=>em_save_draft($p,$incomplete+['mail_ids'=>[$first,$second]]),'Salvataggio incompleto ammesso');
+}
+ef_check(count(dc_rows($p,'email_messaggi'))===$beforeDrafts,'Salvataggio incompleto crea righe');
+$peopleOnly=em_save_draft($p,['subject'=>'DESTINATARI '.$tag,'text'=>'Contenuto iniziale','html'=>'<p>Contenuto iniziale</p>','mail_ids'=>[$first,$second]]);
 ef_check(count(dc_rows($p,'email_destinatari','WHERE MessaggioID=?',[$peopleOnly]))===1,'Duplicati in bozza');
-ef_bad(fn()=>em_prepare($p,$peopleOnly),'Invio senza contenuto ammesso');
 $draft=dc_find($p,'email_messaggi',['ID'=>$peopleOnly]);
 em_save_draft($p,['id'=>$peopleOnly,'version'=>$draft['Versione'],'subject'=>'FLUSSO '.$tag,'text'=>'Messaggio {nome}','html'=>'<p>Messaggio {nome}</p>','mail_ids'=>[$first]]);
 dc_update($p,'Mail',['ID'=>$first],['Indirizzo'=>'aggiornato.'.strtolower($tag).'@example.invalid']);
@@ -45,3 +49,4 @@ if(dc_active($p))ef_check($p->query('SELECT Oggetto FROM email_messaggi WHERE ID
 // Ripristina una coppia duplicata per le prove dell’interfaccia, senza invii reali.
 dc_update($p,'Mail',['ID'=>$first],['Indirizzo'=>$email]);dc_update($p,'Soggetti',['ID'=>$lr],['Nome'=>'COGNOME NOME LR '.$tag]);
 echo 'OK: flusso '.$tag.', bozze indipendenti, rubrica viva, duplicati, preparazione obsoleta, copie, cancellazioni e lock. Nessuna email reale.'.PHP_EOL;
+
