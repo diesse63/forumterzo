@@ -13,17 +13,10 @@
  document.getElementById('email-toolbar').hidden=!editable;
  const rich=document.createElement('input');rich.type='hidden';rich.name='rich';rich.value='1';form.append(rich);
  form.addEventListener('submit',()=>{plain.value=editor.innerText;html.value=editor.innerHTML;});
- const entries=[...document.querySelectorAll('.email-contact')],count=document.getElementById('email-count');
- function selectedCount(){count.textContent='('+entries.filter(e=>e.querySelector('input').checked).length+' selezionati)';}
- function filter(){
-  const q=document.getElementById('email-search').value.toLocaleLowerCase().trim(),type=document.getElementById('email-type').value,list=document.getElementById('email-list').value;
-  entries.forEach(entry=>{entry.hidden=!(entry.dataset.search.toLocaleLowerCase().includes(q)&&(!type||entry.dataset.type===type)&&(!list||entry.dataset.lists.split(',').includes(list)));});
- }
- ['email-search','email-type','email-list'].forEach(id=>document.getElementById(id).addEventListener(id==='email-search'?'input':'change',filter));
- entries.forEach(e=>e.querySelector('input').addEventListener('change',selectedCount));
- document.getElementById('email-all')?.addEventListener('click',()=>{entries.filter(e=>!e.hidden).forEach(e=>{const b=e.querySelector('input');if(!b.disabled)b.checked=true;});selectedCount();});
- document.getElementById('email-none')?.addEventListener('click',()=>{entries.forEach(e=>{const b=e.querySelector('input');if(!b.disabled)b.checked=false;});selectedCount();});
- selectedCount();
+ const selection=window.initEmailRecipients(form,editable);
+ const initialSubject=document.getElementById('email-subject').value,initialHTML=editor.innerHTML;
+ document.querySelectorAll('[data-email-focus]').forEach(link=>link.addEventListener('click',()=>{document.getElementById(link.dataset.emailFocus)?.focus();}));
+ document.getElementById('email-prepare-form')?.addEventListener('submit',event=>{if(selection.hasChanged()||editor.innerHTML!==initialHTML||document.getElementById('email-subject').value!==initialSubject){event.preventDefault();alert('Salva la bozza prima di preparare: testo o destinatari sono stati modificati.');}});
  let savedRange=null;
  function saveRange(){const s=window.getSelection();if(s.rangeCount&&editor.contains(s.anchorNode))savedRange=s.getRangeAt(0).cloneRange();}
  function restore(){editor.focus();if(savedRange){const s=window.getSelection();s.removeAllRanges();s.addRange(savedRange);}}
@@ -39,8 +32,8 @@
  editor.addEventListener('paste',event=>{if(!editable)return;event.preventDefault();document.execCommand('insertText',false,event.clipboardData.getData('text/plain'));});
  editor.addEventListener('drop',event=>event.preventDefault());
  document.getElementById('email-preview').addEventListener('click',()=>{
-  const first=entries.find(e=>e.querySelector('input').checked);
-  const name=first?.querySelector('strong')?.textContent||'Destinatario di esempio';
+  const first=selection.values()[0];
+  const name=first?.Nome||'Destinatario di esempio';
   const clone=editor.cloneNode(true);
   clone.querySelectorAll('script,style,iframe,object,embed,svg,math,img,form,input,link,meta').forEach(e=>e.remove());
   clone.querySelectorAll('*').forEach(e=>[...e.attributes].forEach(a=>{if(!['href','style'].includes(a.name)||a.name==='href'&&!/^https?:\/\//i.test(a.value))e.removeAttribute(a.name);}));
@@ -51,3 +44,4 @@
  });
  document.getElementById('email-preview-close').addEventListener('click',()=>document.getElementById('email-preview-dialog').close());
 })();
+

@@ -5,7 +5,7 @@ La procedura usa soltanto gli indirizzi selezionati nella rubrica. Non esistono 
 ## Aggiornamento del codice esistente
 
 1. Fare il normale backup di database e cartella private, poi git pull --ff-only sul PC.
-2. Caricare con WinSCP invio_email.php, includes/email.php e includes/email_config_form.php. Mantenere le altre parti dell'applicazione aggiornate. Non caricare tests, .github o credenziali pubbliche. Tenere disattivata l'eliminazione automatica di WinSCP.
+2. Caricare con WinSCP invio_email.php, email_rubrica.php, includes/email.php, includes/email_compose.php, includes/email_archivio.php, includes/email_config_form.php, assets/email.js, assets/email.css e assets/email_destinatari.js. Mantenere le altre parti dell'applicazione aggiornate. Non caricare tests, .github o credenziali pubbliche. Tenere disattivata l'eliminazione automatica di WinSCP.
 3. In Configurazione premere Salva nuova versione configurazione, quindi Verifica connessione — nessuna email. La nuova versione è automaticamente di produzione; non occorre selezionare o confermare una modalità.
 4. Se manca il file privato della credenziale, la pagina rimane apribile: copiare BRIDGE_SECRET dalle proprietà del progetto Google corretto nel campo Credenziale del ponte, quindi salvare. Non è la password Gmail e non va comunicata in chat. Non modificare le chiavi utenti o dati.
 5. Le vecchie campagne preparate nella modalità rimossa non vengono convertite: restano nello storico e non possono spedire nuovi messaggi. Creare una nuova bozza con i destinatari scelti. Gli esiti incerti precedenti si possono verificare senza reinviare e i link già ricevuti restano validi.
@@ -42,7 +42,7 @@ Cambiare solo nome o lotto non richiede rigenerare la credenziale: lasciare vuot
 
 La selezione legge Mail, Associazioni, Soggetti e le liste attuali; non li modifica. Ogni bozza copia nominativi e indirizzi in email_destinatari, separata dai dati importati. Gli indirizzi uguali vengono accorpati; gli indirizzi invalidi o senza collegamento all'ente non sono selezionabili. Il segnaposto {nome} viene sostituito all'invio; il link di conferma viene aggiunto dal server.
 
-Preparare una campagna congela testo, destinatari e configurazione. Non è modificabile: per cambiare selezione creare una nuova bozza. Invio a lotti fino a 20 e nei limiti della quota restituita dal ponte. Ogni lotto richiede conferma esplicita; nessun invio avviene salvando una configurazione o una bozza.
+Preparare una campagna congela testo, destinatari e configurazione. Non è modificabile: per cambiare selezione duplicarla come nuova bozza. Invio a lotti fino a 20 e nei limiti della quota restituita dal ponte. Ogni lotto richiede conferma esplicita; nessun invio avviene salvando una configurazione o una bozza.
 
 Gli stati in_corso e da_verificare non vengono reinviati automaticamente: usare Verifica esiti senza reinviare. Non cancellare il registro job_* nel progetto Google mentre serve ad accertare un invio, perché previene duplicati dopo timeout. I link già spediti continuano a usare il relativo hash memorizzato; non cambiare security.php per modificare le impostazioni email.
 
@@ -53,3 +53,24 @@ I campi riservati usano includes/dati.php e il contratto di cifratura corrente. 
 ## Verifiche automatiche
 
 Su database effimero con trasporto simulato: invio solo agli indirizzi selezionati, oggetto non alterato, configurazione sempre produzione, rifiuto dei vecchi moduli, blocco delle campagne storiche senza chiamare il ponte, nessuna riscrittura dei vecchi destinatari, rifiuto di indirizzi effettivi divergenti o invii fuori rubrica, duplicati, lotti, firme, nonce e conferme. Verifiche browser di editor, configurazione senza campi/modalità rimossi, gestione credenziale mancante, mobile e permessi. Regressioni anche dopo cifratura. Nessun invio reale da CI.
+
+
+## Flusso libero e layout
+
+La sezione Mail occupa tutta la riga iniziale. Sotto sono affiancati il riquadro Destinatari dalla rubrica e la lista Mail e nominativi selezionati; su mobile si dispongono in verticale. I collegamenti Prepara prima la mail / Seleziona prima i nominativi permettono di scegliere da dove iniziare. Si può salvare una bozza con il solo messaggio, con i soli destinatari o con entrambi. Prima dell'elaborazione sono obbligatori oggetto, testo e almeno un indirizzo.
+
+La rubrica mostra soltanto indirizzi formalmente validi e collegati a un ente. Visualizzazione per nominativo con ruolo LR/AS e relativo ente, oppure raggruppata per ente con i riferimenti LR/AS. Il nome completo è quello registrato in Soggetti.Nome: non vengono inventate separazioni tra nome e cognome. Restano selezionabili anche gli indirizzi propri degli enti. Persone senza email possono comparire come riferimenti descrittivi dell'ente, ma non come destinatari selezionabili.
+
+La selezione è unica per indirizzo normalizzato in minuscolo. Scegliendo una riga, tutte le altre con lo stesso indirizzo sono evidenziate e non possono creare un secondo destinatario. La lista a destra indica il nominativo scelto, il ruolo, l'ente e l'email; Rimuovi libera quell'indirizzo. Seleziona visibili rispetta tutti i filtri e non duplica le email. I controlli vengono ripetuti sul server.
+
+La rubrica è riletta ad ogni apertura, ogni 30 secondi mentre la pagina è visibile, al ritorno sulla pagina e con Aggiorna rubrica. Il testo in preparazione non viene sovrascritto. I destinatari selezionati seguono l'ID del recapito: nomi e indirizzi vengono aggiornati e i recapiti rimossi/non validi vengono tolti dalla selezione con avviso. Anche salvataggio e preparazione rileggono il database; se la rubrica cambia dopo il salvataggio, occorre rivedere e salvare la bozza prima di elaborarla. I dati di una mail già elaborata o spedita restano congelati per rappresentare ciò che è stato effettivamente inviato, distinti dalla rubrica attuale.
+
+## Archivio, duplicazione ed eliminazione
+
+Archivio e invii contiene tutte le mail, con ricerca per oggetto, filtro di stato e paginazione: Bozza, Elaborata, Parzialmente inviata, Inviata e Da verificare. I conteggi mostrano destinatari e invii; Apri mail permette di consultare il messaggio.
+
+Duplica come nuova bozza copia soltanto il contenuto e, se selezionato, i destinatari ancora validi in rubrica aggiornandoli ai dati attuali. Non copia la configurazione congelata, i job di invio, le conferme o lo stato inviato. Non spedisce nulla. I destinatari spariti/non validi sono esclusi e vanno ricontrollati nella nuova bozza.
+
+Elimina mail dal gestionale richiede conferma esplicita e rimuove messaggio, destinatari copiati e registro relativo in una transazione. Le email già spedite nelle caselle non vengono ritirate e i relativi link di conferma smettono di funzionare. L'eliminazione non modifica la rubrica né il registro idempotente Google. Viene bloccata durante un lotto o in presenza di esiti in_corso/da_verificare: accertare prima lo stato. Richiede il permesso di scrittura, come duplicazione e salvataggio. Versione della mail e lock impediscono cancellazioni su messaggi modificati o in invio contemporaneamente.
+
+Nessuna modifica strutturale o migrazione SQL per questo flusso: usa le stesse tabelle email e le funzioni dc_* anche per le copie. Le verifiche automatiche coprono ordine libero, bozze parziali, rubrica live, raggruppamenti LR/AS/enti, deduplicazione immediata e server, copie senza invii, cancellazioni con lock e rollback, permessi e dati cifrati. I test non inviano email reali.

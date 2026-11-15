@@ -110,14 +110,8 @@ function em_sanitize(string $html): string {
 }
 function em_save_draft(PDO $p,array $in): int {
  $subject=trim((string)($in['subject']??''));$text=trim((string)($in['text']??''));$html=em_sanitize((string)($in['html']??''));
- if($subject===''||strlen($subject)>250||preg_match('/[\\r\\n]/',$subject)||$text===''||strlen($text)>30000)throw new RuntimeException('Oggetto obbligatorio (massimo 250 byte) e testo obbligatorio (massimo 30.000 byte).');
- $ids=$in['mail_ids']??[];if(!is_array($ids)||!$ids||count($ids)>2000)throw new RuntimeException('Selezionare da 1 a 2000 indirizzi.');
- $ids=array_values(array_unique(array_map('intval',$ids)));$all=em_contacts($p);$selected=[];$found=[];
- foreach($all as $c)if(in_array((int)$c['ID'],$ids,true)){
-  if(!$c['EnteID']||!filter_var($c['Indirizzo'],FILTER_VALIDATE_EMAIL)||strlen($c['Indirizzo'])>254)throw new RuntimeException('Uno degli indirizzi selezionati non è valido o non è collegato a un ente.');
-  $email=strtolower(trim($c['Indirizzo']));$found[]=(int)$c['ID'];if(!isset($selected[$email]))$selected[$email]=$c;
- }
- if(count($found)!==count($ids))throw new RuntimeException('Indirizzi eliminati o modificati: aggiornare la selezione.');
+ if(strlen($subject)>250||preg_match('/[\r\n]/',$subject)||strlen($text)>30000)throw new RuntimeException('Oggetto massimo 250 byte, senza ritorni a capo; testo massimo 30.000 byte.');
+ $selected=em_resolve_recipients($p,$in['mail_ids']??[]);
  $id=(int)($in['id']??0);$p->beginTransaction();
  try{
   if($id){
@@ -148,12 +142,16 @@ function em_prepare(PDO $p,int $id): int {
  em_require_production($config);
  $p->beginTransaction();
  try{
-  $q=$p->prepare('SELECT * FROM email_messaggi WHERE ID=? FOR UPDATE');$q->execute([$id]);$m=$q->fetch();
+  $m=dc_find($p,'email_messaggi',['ID'=>$id],true);
   if(!$m)throw new RuntimeException('Messaggio non trovato.');
   if(!em_campaign_sendable($p,$id,$config))throw new RuntimeException('La campagna deve contenere soltanto destinatari selezionati dalla rubrica.');
   if($m['Stato']==='preparato'){if(!em_campaign_sendable($p,$id,em_config($p,(int)$m['ConfigID'])??[]))throw new RuntimeException('Campagna precedente non utilizzabile. Creare una nuova bozza dalla rubrica.');$q=$p->prepare('SELECT COUNT(*) FROM email_invii WHERE MessaggioID=?');$q->execute([$id]);$count=(int)$q->fetchColumn();$p->commit();return $count;}
   $dest=dc_rows($p,'email_destinatari','WHERE MessaggioID=? ORDER BY ID',[$id]);
   if(!$dest)throw new RuntimeException('Bozza senza destinatari.');
+  if(trim($m['Oggetto'])===''||trim($m['Testo'])==='')throw new RuntimeException('Completare oggetto e testo prima di preparare l’invio.');
+  $current=array_values(em_resolve_recipients($p,array_column($dest,'MailOrigineID')));
+  $byId=[];foreach($current as $r)$byId[(int)$r['ID']]=$r;
+  foreach($dest as $d){$r=$byId[(int)$d['MailOrigineID']]??null;if(!$r||$d['Email']!==strtolower(trim($r['Indirizzo']))||$d['Nome']!==$r['Nome']||$d['Ente']!==$r['Ente']||$d['Tipo']!==$r['TipoSoggetto'])throw new RuntimeException('La rubrica è cambiata. Riaprire e salvare la bozza per aggiornare i destinatari prima di preparare.');}
   foreach($dest as $d){$job=bin2hex(random_bytes(16));$to=$d['Email'];dc_insert($p,'email_invii',['ID'=>$job,'MessaggioID'=>$id,'DestinatarioID'=>$d['ID'],'EmailEffettiva'=>$to,'CodiceHash'=>hash('sha256',em_token($job)),'ScadeIl'=>gmdate('Y-m-d H:i:s',time()+365*86400)]);}
   $q=$p->prepare("UPDATE email_messaggi SET Stato='preparato',ConfigID=?,Versione=Versione+1 WHERE ID=?");$q->execute([$config['ID'],$id]);$p->commit();return count($dest);
  }catch(Throwable $e){if($p->inTransaction())$p->rollBack();throw $e;}
@@ -242,9 +240,57 @@ function em_encrypted_contacts(PDO $p,string $search,int $type,int $list):array 
  }
  usort($rows,fn($a,$b)=>(int)$a['ID']<=>(int)$b['ID']);return $rows;
 }
-function em_campaigns(PDO $p):array {return dc_rows($p,'email_messaggi','ORDER BY ID DESC LIMIT 100');}
+function em_campaigns(PDO $p):array {
+ $stats=[];foreach($p->query("SELECT MessaggioID,COUNT(*) AS Totale,SUM(Stato='inviato') AS Inviate,SUM(Stato IN ('in_corso','da_verificare')) AS Incerte FROM email_invii GROUP BY MessaggioID") as $r)$stats[$r['MessaggioID']]=$r;
+ $dest=[];foreach($p->query('SELECT MessaggioID,COUNT(*) AS N FROM email_destinatari GROUP BY MessaggioID') as $r)$dest[$r['MessaggioID']]=(int)$r['N'];
+ $out=[];foreach(dc_iter($p,'email_messaggi') as $r){unset($r['HTML'],$r['Testo']);$st=$stats[$r['ID']]??['Totale'=>0,'Inviate'=>0,'Incerte'=>0];$r['Destinatari']=$dest[$r['ID']]??0;$r['Inviate']=(int)$st['Inviate'];$r['Incerte']=(int)$st['Incerte'];$r['StatoEtichetta']=$r['Stato']==='bozza'?'Bozza':($r['Incerte']?'Da verificare':((int)$st['Totale']>0&&$r['Inviate']===(int)$st['Totale']?'Inviata':($r['Inviate']?'Parzialmente inviata':'Elaborata')));$out[]=$r;}
+ usort($out,fn($a,$b)=>(int)$b['ID']<=>(int)$a['ID']);return $out;
+}
 function em_logs(PDO $p,int $id=0):array {
  $rows=dc_rows($p,'email_invii',($id?'WHERE MessaggioID=? ':'').'ORDER BY IniziatoIl DESC,ID LIMIT 500',$id?[$id]:[]);
  foreach($rows as &$r){$d=dc_find($p,'email_destinatari',['ID'=>$r['DestinatarioID']]);$m=dc_find($p,'email_messaggi',['ID'=>$r['MessaggioID']]);$r['Nome']=$d['Nome'];$r['Email']=$d['Email'];$r['Oggetto']=$m['Oggetto'];}unset($r);return $rows;
 }
 
+
+
+function em_resolve_recipients(PDO $p,$ids,bool $strict=true):array {
+ if(!is_array($ids)||count($ids)>2000)throw new RuntimeException('Selezione destinatari non valida (massimo 2000 indirizzi).');
+ $ids=array_values(array_unique(array_map('intval',$ids)));$wanted=array_fill_keys($ids,true);$selected=[];$found=[];
+ foreach(em_contacts($p) as $c)if(isset($wanted[(int)$c['ID']])){
+  $email=strtolower(trim((string)$c['Indirizzo']));
+  if(!$c['EnteID']||!filter_var($email,FILTER_VALIDATE_EMAIL)||strlen($email)>254){if($strict)throw new RuntimeException('Indirizzo non valido o non collegato a un ente.');continue;}
+  $found[(int)$c['ID']]=true;if(!isset($selected[$email]))$selected[$email]=$c;
+ }
+ if($strict&&count($found)!==count($ids))throw new RuntimeException('Indirizzi eliminati o modificati: aggiornare la selezione dalla rubrica.');
+ return $selected;
+}
+function em_address_book(PDO $p):array {
+ $people=[];foreach(dc_iter($p,'Soggetti') as $r)$people[$r['ID_Associazione']][]=['nome'=>$r['Nome'],'ruolo'=>$r['Tipo']];
+ $lists=[];foreach($p->query('SELECT IDMail,IDListaMail FROM ListaMail') as $r)$lists[$r['IDMail']][]=(int)$r['IDListaMail'];
+ $out=[];foreach(em_contacts($p) as $c){$email=strtolower(trim((string)$c['Indirizzo']));if(!$c['EnteID']||!filter_var($email,FILTER_VALIDATE_EMAIL)||strlen($email)>254)continue;
+  $c['Indirizzo']=$email;$c['Ruolo']=['REFERENTE'=>'LR','ALTRO'=>'AS','ASSOCIAZIONE'=>'ENTE'][$c['TipoSoggetto']]??'';$c['Riferimenti']=$people[$c['EnteID']]??[];$c['Liste']=$lists[$c['ID']]??[];$out[]=$c;
+ }
+ return $out;
+}
+function em_duplicate(PDO $p,int $id,bool $withRecipients):int {
+ $p->beginTransaction();
+ try{
+  $source=dc_find($p,'email_messaggi',['ID'=>$id],true);if(!$source)throw new RuntimeException('Mail non trovata.');
+  $dest=$withRecipients?dc_rows($p,'email_destinatari','WHERE MessaggioID=?',[$id]):[];
+  $resolved=em_resolve_recipients($p,array_filter(array_column($dest,'MailOrigineID')),false);
+  $new=(int)dc_insert($p,'email_messaggi',['Oggetto'=>$source['Oggetto'],'HTML'=>em_sanitize($source['HTML']),'Testo'=>$source['Testo']]);
+  foreach($resolved as $email=>$c)dc_insert($p,'email_destinatari',['MessaggioID'=>$new,'MailOrigineID'=>$c['ID'],'Nome'=>$c['Nome'],'Email'=>$email,'Tipo'=>$c['TipoSoggetto'],'Ente'=>$c['Ente']]);
+  $p->commit();return $new;
+ }catch(Throwable $e){if($p->inTransaction())$p->rollBack();throw $e;}
+}
+function em_delete(PDO $p,int $id,int $version):void {
+ $q=$p->prepare('SELECT GET_LOCK(?,0)');$lock='email_send_'.$id;$q->execute([$lock]);if((int)$q->fetchColumn()!==1)throw new RuntimeException('Invio in corso: attendere il termine prima di eliminare.');
+ try{
+  $p->beginTransaction();$m=dc_find($p,'email_messaggi',['ID'=>$id],true);
+  if(!$m||(int)$m['Versione']!==$version)throw new RuntimeException('Mail eliminata o modificata: aggiornare l’archivio.');
+  $q=$p->prepare("SELECT COUNT(*) FROM email_invii WHERE MessaggioID=? AND Stato IN ('in_corso','da_verificare')");$q->execute([$id]);if((int)$q->fetchColumn()>0)throw new RuntimeException('Verificare gli esiti incerti prima di eliminare la mail.');
+  foreach(['email_invii','email_destinatari'] as $table){$q=$p->prepare('DELETE FROM '.dc_q($table).' WHERE MessaggioID=?');$q->execute([$id]);}
+  $q=$p->prepare('DELETE FROM email_messaggi WHERE ID=?');$q->execute([$id]);$p->commit();
+ }catch(Throwable $e){if($p->inTransaction())$p->rollBack();throw $e;}
+ finally{$q=$p->prepare('SELECT RELEASE_LOCK(?)');$q->execute([$lock]);}
+}

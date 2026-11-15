@@ -35,6 +35,7 @@ jobs:
           php tests/scheda.php
           php tests/email.php
           php tests/email_diagnostica.php
+          php tests/email_flusso.php
           php tests/ghost.php
       - name: Compatibilità cifratura e HTTPS senza Sodium e cURL
         run: |
@@ -53,12 +54,15 @@ jobs:
           node tests/cards.cjs
           node tests/bridge.cjs
           node tests/email.cjs
+          node tests/email_flusso.cjs
       - name: Migrazione e regressioni cifratura dati reali simulati
         env:
           POIMANAGER_TEST: '1'
         run: |
           php -d disable_functions=sodium_crypto_secretbox,sodium_crypto_secretbox_open tests/cifratura.php
           node tests/cifratura.cjs
+          php tests/email_flusso.php
+          FLUSSO_CIFRATO=1 node tests/email_flusso.cjs
           php tests/scheda.php
           SCHEDA_CIFRATA=1 node tests/scheda.cjs
           SCHEDA_CIFRATA=1 node tests/cards.cjs
@@ -67,5 +71,6 @@ jobs:
         env:
           POIMANAGER_TEST: '1'
         run: php tests/recupero.php
+
 
 

@@ -1,0 +1,33 @@
+const {chromium}=require('playwright'),{spawn,execFileSync}=require('child_process');
+(async()=>{
+ const server=spawn('php',['-S','127.0.0.1:8105','-t','.'],{stdio:'ignore'});let browser;
+ const base='http://127.0.0.1:8105',tag=process.env.FLUSSO_CIFRATO==='1'?'E':'N',check=(v,m)=>{if(!v)throw Error(m)};
+ try{
+  for(let i=0;i<50;i++){try{if((await fetch(base+'/login.php')).ok)break;}catch{}await new Promise(r=>setTimeout(r,100));}
+  browser=await chromium.launch({channel:'chrome',headless:true,args:['--no-sandbox']});const page=await browser.newPage({viewport:{width:1350,height:1000}});
+  await page.goto(base+'/login.php');await page.locator('input[name=nome]').fill('admin');await page.locator('input[name=password]').fill('1234567.');await Promise.all([page.waitForURL('**/pannello.php'),page.getByRole('button',{name:'Accedi',exact:true}).click()]);
+  await page.goto(base+'/invio_email.php');
+  const top=await page.locator('#email-message-card').boundingBox(),left=await page.locator('#email-address-card').boundingBox(),right=await page.locator('#email-selection-card').boundingBox();check(top.y<left.y&&Math.abs(left.y-right.y)<4&&right.x>left.x,'Layout messaggio/rubrica/selezionati');
+  await page.getByRole('link',{name:'Prepara prima la mail',exact:true}).click();check(await page.locator('#email-subject').evaluate(e=>document.activeElement===e),'Scelta partenza testo');
+  await page.locator('#email-subject').fill('SOLO MESSAGGIO BROWSER '+tag);await page.locator('#email-editor').fill('Testo senza destinatari');await Promise.all([page.waitForURL('**/invio_email.php?tab=componi&id=*&salvato=1'),page.getByRole('button',{name:'Salva bozza e destinatari'}).click()]);check((await page.locator('#email-count').textContent()).includes('0 indirizzi'),'Bozza senza destinatari non salvata');
+  await page.goto(base+'/invio_email.php');await page.getByRole('link',{name:'Seleziona prima i nominativi',exact:true}).click();await page.locator('#email-search').fill('FLUSSO BROWSER '+tag);await page.locator('#email-role').selectOption('LR');
+  await page.locator('.email-contact:visible input:enabled').first().check();await page.locator('#email-role').selectOption('');
+  check((await page.locator('#email-count').textContent()).includes('1 indirizzi'),'Indirizzi duplicati selezionati');check(await page.locator('.email-contact.is-selected:visible').count()===2&&await page.locator('.email-contact.is-duplicate-selected input:disabled').count()>=1,'Evidenza duplicati mancante');
+  await page.locator('#email-view').selectOption('enti');check((await page.locator('.email-entity-group:visible').textContent()).includes('COGNOME NOME LR '+tag),'Ente privo di riferimenti LR');
+  const chosen=await page.locator('#email-selection-inputs input').inputValue();await page.locator('#email-editor').fill('');await Promise.all([page.waitForURL('**/invio_email.php?tab=componi&id=*&salvato=1'),page.getByRole('button',{name:'Salva bozza e destinatari'}).click()]);
+  check(await page.locator('#email-subject').inputValue()==='','Destinatari senza testo non salvabili');
+  await page.locator('#email-subject').fill('MAIL FLUSSO BROWSER '+tag);await page.locator('#email-editor').fill('Testo conservato durante aggiornamento');
+  const code="require 'includes/database.php';require 'includes/dati.php';$p=poimanager_db();$m=dc_find($p,'Mail',['ID'=>(int)$argv[1]]);dc_update($p,'Mail',['ID'=>$m['ID']],['Indirizzo'=>$argv[2]]);dc_update($p,'Soggetti',['ID'=>$m['IDSoggetto']],['Nome'=>$argv[3]]);";
+  const updated='live.'+tag.toLowerCase()+'@example.invalid',name='NUOVO COGNOME NOME '+tag;execFileSync('php',['-r',code,chosen,updated,name]);
+  await page.getByRole('button',{name:'Aggiorna rubrica',exact:true}).click();await page.locator('#email-selected-list').getByText(name+' · LR',{exact:true}).waitFor();check((await page.locator('#email-selected-list').textContent()).includes(updated)&&await page.locator('#email-subject').inputValue()==='MAIL FLUSSO BROWSER '+tag,'Aggiornamento perde testo o selezione');
+  await Promise.all([page.waitForURL('**/invio_email.php?tab=componi&id=*&salvato=1'),page.getByRole('button',{name:'Salva bozza e destinatari'}).click()]);
+  const source=new URL(page.url()).searchParams.get('id');await page.locator('#email-prepare-form input[name=confirm]').check();await Promise.all([page.waitForURL('**/invio_email.php?tab=registro&id=*'),page.getByRole('button',{name:'Prepara campagna senza inviare'}).click()]);
+  const sourceCard=page.locator(`[data-campaign-id="${source}"]`);check((await sourceCard.textContent()).includes('Elaborata'),'Stato elaborata assente');
+  await Promise.all([page.waitForURL('**/invio_email.php?tab=componi&id=*&salvato=1&duplicato=1'),sourceCard.getByRole('button',{name:'Duplica come nuova bozza'}).click()]);const copy=new URL(page.url()).searchParams.get('id');check(copy!==source&&(await page.locator('#email-selected-list').textContent()).includes(updated),'Duplicazione incompleta');
+  await page.goto(base+'/invio_email.php?tab=registro&id='+source);const copied=page.locator(`[data-campaign-id="${copy}"]`);await copied.locator('.email-delete summary').click();await copied.locator('.email-delete input[name=confirm]').check();await Promise.all([page.waitForURL('**/invio_email.php?tab=registro&id=0'),copied.getByRole('button',{name:'Elimina definitivamente'}).click()]);check(await page.locator(`[data-campaign-id="${copy}"]`).count()===0&&await page.locator(`[data-campaign-id="${source}"]`).count()===1,'Eliminazione su ID sbagliato');
+  await page.setViewportSize({width:375,height:950});await page.goto(base+'/invio_email.php');check(!await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),'Overflow flusso mobile');
+  await page.goto(base+'/logout.php');await page.getByRole('button',{name:'Conferma uscita'}).click();await page.locator('input[name=nome]').fill('user');await page.locator('input[name=password]').fill('1234567.');await Promise.all([page.waitForURL('**/pannello.php'),page.getByRole('button',{name:'Accedi',exact:true}).click()]);
+  const denied=await page.request.post(base+'/invio_email.php',{form:{action:'delete',id:source,confirm:'1'}});check(denied.status()===403,'Eliminazione permessa in lettura');const deniedCopy=await page.request.post(base+'/invio_email.php',{form:{action:'duplicate',id:source}});check(deniedCopy.status()===403,'Duplicazione permessa in lettura');
+  console.log('OK: flusso browser '+tag+', ordine libero, layout, deduplica, nomi/enti, rubrica viva, copie, eliminazione, mobile e permessi. Nessuna spedizione.');
+ }finally{if(browser)await browser.close();server.kill();}
+})().catch(e=>{console.error(e);process.exit(1)});
