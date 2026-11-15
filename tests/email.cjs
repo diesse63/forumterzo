@@ -1,4 +1,4 @@
-const {chromium}=require('playwright'),{spawn,execFileSync}=require('child_process');
+const {chromium}=require('playwright'),{spawn,execFileSync}=require('child_process'),fs=require('fs');
 (async()=>{
  const server=spawn('php',['-S','127.0.0.1:8101','-t','.'],{stdio:'ignore'});let browser;
  function check(ok,msg){if(!ok)throw Error(msg);}
@@ -21,7 +21,14 @@ const {chromium}=require('playwright'),{spawn,execFileSync}=require('child_proce
   await page.goto(origin+'/invio_email.php?tab=config');
   await page.locator('#email-generate-secret').click();
   check(/^[a-f0-9]{64}$/.test(await page.locator('#email-secret').inputValue()),'Generazione segreto');
-  check(!await page.getByRole('button',{name:'Invia email di prova',exact:true}).isEnabled(),'Prova attiva senza verifica');
+  check(await page.locator('[name=mode],[name=test_email],[name=production_confirm]').count()===0,'Campi della modalità rimossa ancora presenti');
+  check(await page.getByRole('button',{name:'Invia email di prova',exact:true}).count()===0,'Invio fuori rubrica ancora disponibile');
+  check(await page.getByRole('button',{name:'Verifica connessione — nessuna email',exact:true}).count()===1,'Verifica connessione assente');
+  const secretPath=execFileSync('php',['-r',"require 'includes/email.php';echo em_secret_path(em_config(poimanager_db())['SegretoRef']);"],{encoding:'utf8'});
+  fs.renameSync(secretPath,secretPath+'.hold');
+  try{
+   await page.reload();check(await page.locator('input[name=secret]').count()===1&&(await page.locator('body').textContent()).includes('Credenziale privata non disponibile'),'Credenziale mancante blocca configurazione');
+  }finally{fs.renameSync(secretPath+'.hold',secretPath);}
   await page.setViewportSize({width:375,height:900});await page.goto(origin+'/invio_email.php');
   check(!await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),'Overflow email mobile');
   const tokenCode="require 'includes/email.php'; $p=poimanager_db(); $r=$p->query(\"SELECT ID FROM email_invii WHERE Stato='inviato' AND ConfermatoIl IS NULL LIMIT 1\")->fetch(); if(!$r)exit(1); echo json_encode(['id'=>$r['ID'],'token'=>em_token($r['ID'])]);";
@@ -42,3 +49,4 @@ const {chromium}=require('playwright'),{spawn,execFileSync}=require('child_proce
   console.log('OK: pannello email, selezione, editor, bozza, anteprima, configurazione, mobile, conferma solo POST e permessi. Nessun invio reale.');
  }finally{if(browser)await browser.close();server.kill();}
 })().catch(e=>{console.error(e);process.exit(1)});
+

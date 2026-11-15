@@ -46,7 +46,7 @@ cr_check($p->query('SELECT Oggetto FROM email_messaggi WHERE ID='.$draft)->fetch
 $config=em_config($p);$fake=function($c,$k,$payload){return ['ok'=>true,'sender'=>$c['Mittente'],'quota'=>100,'status'=>'sent'];};
 em_ping($p,$config,$fake);em_prepare($p,$draft);
 $seen=null;$send=function($c,$k,$payload)use(&$seen,$fake){if($payload['op']==='send')$seen=$payload;return $fake($c,$k,$payload);};
-em_send_batch($p,$draft,$send);cr_check($seen!==null&&$seen['subject']==='[TEST] CIFRATURA EMAIL'&&$seen['to']===$config['EmailTest'],'Invio non decifrato');
+em_send_batch($p,$draft,$send);cr_check($seen!==null&&$seen['subject']==='CIFRATURA EMAIL'&&$seen['to']===strtolower($contact['Indirizzo']),'Invio non decifrato');
 $map=table_mapping();$path=tempnam(sys_get_temp_dir(),'crypto_import_');
 try{
  $s=new PDO('sqlite:'.$path);$s->setAttribute(PDO::ATTR_ERRMODE,PDO::ERRMODE_EXCEPTION);$s->exec($map['tables']['Tipologia']['source_sql']);
@@ -69,3 +69,4 @@ $p->prepare('UPDATE Associazioni SET _Cifrato=? WHERE ID=?')->execute([$original
 $rejected=false;try{enti_detail($p,1);}catch(RuntimeException $e){$rejected=true;}cr_check($rejected,'Scambio di ciphertext tra righe accettato');
 $p->prepare('UPDATE Associazioni SET _Cifrato=? WHERE ID=1')->execute([$targetOriginal]);
 echo "OK: migrazione riprendibile, dati/ID invariati, nessun residuo testuale, ricerche, email, import/update, unicità e autenticazione della riga. Nessuna email reale.\n";
+

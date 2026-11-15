@@ -47,10 +47,10 @@ function em_config(PDO $p,?int $id=null): ?array {
 }
 function em_save_config(PDO $p,array $in): int {
  $url=trim((string)($in['url']??''));em_bridge_url($url);
- $sender=strtolower(trim((string)($in['sender']??'')));$test=strtolower(trim((string)($in['test_email']??'')));$name=trim((string)($in['sender_name']??'Gestione'));
- $mode=(string)($in['mode']??'test');$batch=(int)($in['batch']??20);
- if(!filter_var($sender,FILTER_VALIDATE_EMAIL)||!filter_var($test,FILTER_VALIDATE_EMAIL)||strlen($sender)>254||strlen($test)>254)throw new RuntimeException('Inserire mittente e destinatario di prova validi.');
- if(!in_array($mode,['test','produzione'],true)||($mode==='produzione'&&!isset($in['production_confirm'])))throw new RuntimeException('Confermare esplicitamente l’attivazione della produzione.');
+ $sender=strtolower(trim((string)($in['sender']??'')));$name=trim((string)($in['sender_name']??'Gestione'));
+ $batch=(int)($in['batch']??20);
+ if(isset($in['mode'])&&$in['mode']!=='produzione')throw new RuntimeException('Configurazione obsoleta: ricaricare la pagina. Gli invii usano gli indirizzi selezionati nell’anagrafica.');
+ if(!filter_var($sender,FILTER_VALIDATE_EMAIL)||strlen($sender)>254)throw new RuntimeException('Inserire un indirizzo mittente valido.');
  if($batch<1||$batch>20||strlen($name)>200)throw new RuntimeException('Lotto da 1 a 20 e nome mittente fino a 200 caratteri.');
  $old=em_config($p);$secret=trim((string)($in['secret']??''));
  if($secret===''){$secret=$old?em_secret($old):'';}
@@ -64,7 +64,7 @@ function em_save_config(PDO $p,array $in): int {
  @chmod($file,0600);
  try{
   $p->beginTransaction();$p->exec('UPDATE email_configurazione SET Attiva=0 WHERE Attiva=1');
-  $id=(int)dc_insert($p,'email_configurazione',['URLPonte'=>$url,'Mittente'=>$sender,'NomeMittente'=>$name,'Modalita'=>$mode,'EmailTest'=>$test,'Lotto'=>$batch,'SegretoRef'=>$ref]);$p->commit();return $id;
+  $id=(int)dc_insert($p,'email_configurazione',['URLPonte'=>$url,'Mittente'=>$sender,'NomeMittente'=>$name,'Modalita'=>'produzione','EmailTest'=>'','Lotto'=>$batch,'SegretoRef'=>$ref]);$p->commit();return $id;
  }catch(Throwable $e){if($p->inTransaction())$p->rollBack();@unlink($file);throw $e;}
 }
 function em_ping(PDO $p,array $config,?callable $bridge=null): array {
@@ -136,24 +136,35 @@ function em_token(string $id): string {
  if($key===false||strlen($key)!==32)throw new RuntimeException('Chiave conferme non valida.');
  return hash_hmac('sha256','email-confirm-v1:'.$id,$key);
 }
+function em_require_production(array $config):void {
+ if(($config['Modalita']??'')!=='produzione')throw new RuntimeException('Configurazione precedente non utilizzabile per nuovi invii. Salvare la configurazione attuale e creare una nuova campagna dalla rubrica.');
+}
+function em_campaign_sendable(PDO $p,int $id,array $config):bool {
+ if(($config['Modalita']??'')!=='produzione')return false;
+ $q=$p->prepare("SELECT COUNT(*) FROM email_destinatari WHERE MessaggioID=? AND (MailOrigineID IS NULL OR Tipo NOT IN ('ASSOCIAZIONE','REFERENTE','ALTRO'))");$q->execute([$id]);return (int)$q->fetchColumn()===0;
+}
 function em_prepare(PDO $p,int $id): int {
- $config=em_config($p);if(!$config||!$config['VerificataIl'])throw new RuntimeException('Salvare la configurazione e completare il test connessione.');
+ $config=em_config($p);if(!$config||!$config['VerificataIl'])throw new RuntimeException('Salvare la configurazione e completare la verifica connessione.');
+ em_require_production($config);
  $p->beginTransaction();
  try{
   $q=$p->prepare('SELECT * FROM email_messaggi WHERE ID=? FOR UPDATE');$q->execute([$id]);$m=$q->fetch();
   if(!$m)throw new RuntimeException('Messaggio non trovato.');
-  if($m['Stato']==='preparato'){$q=$p->prepare('SELECT COUNT(*) FROM email_invii WHERE MessaggioID=?');$q->execute([$id]);$count=(int)$q->fetchColumn();$p->commit();return $count;}
+  if(!em_campaign_sendable($p,$id,$config))throw new RuntimeException('La campagna deve contenere soltanto destinatari selezionati dalla rubrica.');
+  if($m['Stato']==='preparato'){if(!em_campaign_sendable($p,$id,em_config($p,(int)$m['ConfigID'])??[]))throw new RuntimeException('Campagna precedente non utilizzabile. Creare una nuova bozza dalla rubrica.');$q=$p->prepare('SELECT COUNT(*) FROM email_invii WHERE MessaggioID=?');$q->execute([$id]);$count=(int)$q->fetchColumn();$p->commit();return $count;}
   $dest=dc_rows($p,'email_destinatari','WHERE MessaggioID=? ORDER BY ID',[$id]);
   if(!$dest)throw new RuntimeException('Bozza senza destinatari.');
-  foreach($dest as $d){$job=bin2hex(random_bytes(16));$to=$config['Modalita']==='test'?$config['EmailTest']:$d['Email'];dc_insert($p,'email_invii',['ID'=>$job,'MessaggioID'=>$id,'DestinatarioID'=>$d['ID'],'EmailEffettiva'=>$to,'CodiceHash'=>hash('sha256',em_token($job)),'ScadeIl'=>gmdate('Y-m-d H:i:s',time()+365*86400)]);}
+  foreach($dest as $d){$job=bin2hex(random_bytes(16));$to=$d['Email'];dc_insert($p,'email_invii',['ID'=>$job,'MessaggioID'=>$id,'DestinatarioID'=>$d['ID'],'EmailEffettiva'=>$to,'CodiceHash'=>hash('sha256',em_token($job)),'ScadeIl'=>gmdate('Y-m-d H:i:s',time()+365*86400)]);}
   $q=$p->prepare("UPDATE email_messaggi SET Stato='preparato',ConfigID=?,Versione=Versione+1 WHERE ID=?");$q->execute([$config['ID'],$id]);$p->commit();return count($dest);
  }catch(Throwable $e){if($p->inTransaction())$p->rollBack();throw $e;}
 }
 function em_payload(array $row,array $config): array {
+ em_require_production($config);
+ if(empty($row['MailOrigineID'])||!in_array($row['Tipo']??'', ['ASSOCIAZIONE','REFERENTE','ALTRO'],true)||!filter_var($row['Email']??'',FILTER_VALIDATE_EMAIL)||strtolower(trim((string)($row['EmailEffettiva']??'')))!==strtolower(trim((string)$row['Email'])))throw new RuntimeException('Destinatario effettivo non coerente con la rubrica congelata. Creare una nuova campagna; nessun invio effettuato.');
  if(!isset($row['CodiceHash'])||!hash_equals((string)$row['CodiceHash'],hash('sha256',em_token($row['ID']))))throw new RuntimeException('Invio preparato con una chiave utenti diversa. Ricreare la campagna come nuova bozza; non reinviare gli esiti incerti.');
  $name=$row['Nome'];$link='https://poimanager.altervista.org/email_conferma.php?t='.em_token($row['ID']);
  $html=str_replace('{nome}',em_h($name),$row['HTML']);$text=str_replace('{nome}',$name,$row['Testo']);
- $subject=$row['Oggetto'];if($config['Modalita']==='test'){$subject='[TEST] '.$subject;$text="PROVA per ".$row['Email']."\n\n".$text;$html='<p><strong>PROVA</strong> per '.em_h($row['Email']).'</p>'.$html;}
+ $subject=$row['Oggetto'];
  return ['op'=>'send','job'=>$row['ID'],'to'=>$row['EmailEffettiva'],'subject'=>$subject,'name'=>$config['NomeMittente'],'text'=>$text."\n\nConferma la lettura: ".$link."\nLink personale: non inoltrarlo.",'html'=>'<div style="font-family:Arial,sans-serif;font-size:16px;line-height:1.6">'.$html.'<p><a href="'.em_h($link).'" style="display:inline-block;padding:14px 22px;background:#175cd3;color:#fff;text-decoration:none;border-radius:8px">Conferma la lettura</a></p><p>Link personale: non inoltrarlo.</p></div>'];
 }
 function em_send_batch(PDO $p,int $id,?callable $bridge=null): array {
@@ -161,7 +172,9 @@ function em_send_batch(PDO $p,int $id,?callable $bridge=null): array {
  $sent=0;$notice='';$start=time();
  try{
   $q=$p->prepare("SELECT m.*,c.Modalita FROM email_messaggi m JOIN email_configurazione c ON c.ID=m.ConfigID WHERE m.ID=? AND m.Stato='preparato'");$q->execute([$id]);$message=$q->fetch();if(!$message)throw new RuntimeException('Preparare prima il messaggio.');
-  $config=em_config($p,(int)$message['ConfigID']);$secret=em_secret($config);
+  $config=em_config($p,(int)$message['ConfigID']);
+  if(!$config||!em_campaign_sendable($p,$id,$config))throw new RuntimeException('Campagna precedente non utilizzabile per inviare. Creare una nuova bozza dalla rubrica.');
+  em_require_production($config);$secret=em_secret($config);
   $ping=$bridge($config,$secret,['op'=>'ping']);if(empty($ping['ok'])||strtolower($ping['sender']??'')!==strtolower($config['Mittente']))throw new RuntimeException('Il mittente del ponte non corrisponde alla campagna.');
   $limit=min((int)$config['Lotto'],max(0,(int)($ping['quota']??0)));
   if(!$limit)return ['sent'=>0,'notice'=>'Quota Gmail esaurita. Riprendere più tardi.'];
@@ -200,17 +213,6 @@ function em_confirm(PDO $p,string $token): bool {
  $q=$p->prepare('SELECT ConfermatoIl FROM email_invii WHERE CodiceHash=?');$q->execute([$hash]);return (bool)$q->fetchColumn();
 }
 
-function em_test_message(PDO $p,array $c): int {
- if(!$c['VerificataIl'])throw new RuntimeException('Eseguire prima il test connessione.');
- $p->beginTransaction();
- try{
-  $text='Messaggio di prova della configurazione. Nessun destinatario delle anagrafiche è coinvolto.';
-  $id=(int)dc_insert($p,'email_messaggi',['Oggetto'=>'PROVA CONFIGURAZIONE GESTIONE EMAIL','HTML'=>'<p>'.$text.'</p>','Testo'=>$text,'Stato'=>'preparato','ConfigID'=>$c['ID']]);
-  $dest=(int)dc_insert($p,'email_destinatari',['MessaggioID'=>$id,'Nome'=>'Destinatario di prova','Email'=>$c['EmailTest'],'Tipo'=>'TEST','Ente'=>'']);$job=bin2hex(random_bytes(16));
-  dc_insert($p,'email_invii',['ID'=>$job,'MessaggioID'=>$id,'DestinatarioID'=>$dest,'EmailEffettiva'=>$c['EmailTest'],'CodiceHash'=>hash('sha256',em_token($job)),'ScadeIl'=>gmdate('Y-m-d H:i:s',time()+365*86400)]);
-  $p->commit();return $id;
- }catch(Throwable $e){if($p->inTransaction())$p->rollBack();throw $e;}
-}
 function em_send_nonce(): string {
  $nonce=bin2hex(random_bytes(16));$_SESSION['email_send_nonces'][$nonce]=time();
  if(count($_SESSION['email_send_nonces'])>200)$_SESSION['email_send_nonces']=array_slice($_SESSION['email_send_nonces'],-100,null,true);
@@ -245,3 +247,4 @@ function em_logs(PDO $p,int $id=0):array {
  $rows=dc_rows($p,'email_invii',($id?'WHERE MessaggioID=? ':'').'ORDER BY IniziatoIl DESC,ID LIMIT 500',$id?[$id]:[]);
  foreach($rows as &$r){$d=dc_find($p,'email_destinatari',['ID'=>$r['DestinatarioID']]);$m=dc_find($p,'email_messaggi',['ID'=>$r['MessaggioID']]);$r['Nome']=$d['Nome'];$r['Email']=$d['Email'];$r['Oggetto']=$m['Oggetto'];}unset($r);return $rows;
 }
+

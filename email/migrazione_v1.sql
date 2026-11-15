@@ -1,10 +1,11 @@
+-- Modalita/EmailTest restano compatibili con lo storico: il codice usa soltanto produzione e non usa EmailTest per inviare.
 CREATE TABLE IF NOT EXISTS email_configurazione (
  ID BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
  URLPonte VARCHAR(400) NOT NULL,
  Mittente VARCHAR(254) NOT NULL,
  NomeMittente VARCHAR(200) NOT NULL,
- Modalita ENUM('test','produzione') NOT NULL DEFAULT 'test',
- EmailTest VARCHAR(254) NOT NULL,
+ Modalita ENUM('test','produzione') NOT NULL DEFAULT 'produzione',
+ EmailTest VARCHAR(254) NOT NULL DEFAULT '',
  Lotto INT NOT NULL DEFAULT 20,
  SegretoRef CHAR(32) NOT NULL,
  Attiva TINYINT NOT NULL DEFAULT 1,
@@ -52,3 +53,4 @@ CREATE TABLE IF NOT EXISTS email_invii (
  FOREIGN KEY (DestinatarioID) REFERENCES email_destinatari(ID) ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
 INSERT INTO Pannelli (Codice,Titolo) SELECT 'gestione_email','Gestione email' WHERE NOT EXISTS (SELECT 1 FROM Pannelli WHERE Codice='gestione_email');
+

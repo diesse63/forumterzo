@@ -1,105 +1,55 @@
-# Aggiornamento: cifratura dei dati gestionali
+# Invio email — destinatari dell’anagrafica
 
-Leggere prima CIFRATURA_DATI.md nella radice. È disponibile la migrazione a lotti da /cifratura_dati.php, da eseguire dopo backup e distribuzione completa del codice. La procedura SQLite attiva usa mappa_v4.json e le scritture protette di includes/dati.php. Dopo l'attivazione non usare vecchi file PHP che leggono o scrivono direttamente le colonne riservate. Profili utenti, credenziali Gmail e token conferme restano separati e invariati. Le precedenti indicazioni sotto che descrivono dati gestionali non cifrati o mappa_v3 sono superate da questo aggiornamento.
+La procedura usa soltanto gli indirizzi selezionati nella rubrica. Non esistono più il selettore TEST/Produzione, un destinatario di prova separato o un pulsante di invio fuori rubrica. Per provare la spedizione creare un soggetto/ente di prova e selezionare soltanto il suo indirizzo.
 
-# Gestione email e ponte Gmail — installazione
+## Aggiornamento del codice esistente
 
-## Cosa comprende
+1. Fare il normale backup di database e cartella private, poi git pull --ff-only sul PC.
+2. Caricare con WinSCP invio_email.php, includes/email.php e includes/email_config_form.php. Mantenere le altre parti dell'applicazione aggiornate. Non caricare tests, .github o credenziali pubbliche. Tenere disattivata l'eliminazione automatica di WinSCP.
+3. In Configurazione premere Salva nuova versione configurazione, quindi Verifica connessione — nessuna email. La nuova versione è automaticamente di produzione; non occorre selezionare o confermare una modalità.
+4. Se manca il file privato della credenziale, la pagina rimane apribile: copiare BRIDGE_SECRET dalle proprietà del progetto Google corretto nel campo Credenziale del ponte, quindi salvare. Non è la password Gmail e non va comunicata in chat. Non modificare le chiavi utenti o dati.
+5. Le vecchie campagne preparate nella modalità rimossa non vengono convertite: restano nello storico e non possono spedire nuovi messaggi. Creare una nuova bozza con i destinatari scelti. Gli esiti incerti precedenti si possono verificare senza reinviare e i link già ricevuti restano validi.
 
-Servizi > Gestione email: scelta degli indirizzi di enti, legali rappresentanti e altri soggetti; filtri per nome/email, tipologia e mailing list; bozza con editor, personalizzazione {nome}, anteprima, preparazione, invio a lotti, registro e conferme volontarie.
-Le quattro nuove tabelle email_messaggi, email_destinatari, email_invii, email_configurazione sono separate dalle anagrafiche. Nessuna FK punta alle tabelle importate da SQLite: nome, indirizzo e riferimento origine vengono copiati. L'importazione SQLite non legge, svuota o aggiorna le tabelle email. Non è creata una seconda rubrica modificabile: i contatti attuali sono solo letti.
-I nuovi dati email non vengono inseriti in Mail/MailList/ListaMail. La sola registrazione nella tabella Pannelli rende il nuovo permesso disponibile senza concederlo agli user.
+Non servono migrazioni SQL, una nuova chiave di cifratura o modifiche al deployment Google per questo aggiornamento. Modalita ed EmailTest restano soltanto per compatibilità con le configurazioni e i dati storici già cifrati; ogni nuova configurazione salva produzione e nessun indirizzo alternativo. Il codice non può reindirizzare l'invio a quel vecchio campo. Le strutture e la mappatura SQLite restano invariate.
 
-## 1. Aggiorna Altervista
+## Collegamento iniziale del ponte Google
 
-Eseguire git pull e trasferire con WinSCP:
-- invio_email.php, email_installazione.php, email_conferma.php nella radice;
-- includes/email.php, includes/email_http.php, includes/email_config_form.php, includes/layout.php;
-- pannello.php, assets/email.css, assets/email.js;
-- cartella email con .htaccess e migrazione_v1.sql. Il file Bridge.gs può restare sul PC: serve per Google.
-Non trasferire tests, .github, .git o credenziali da GitHub. Non sovrascrivere private/config.php o private/security.php.
-Eseguire un backup del database. Accedere come admin e aprire /email_installazione.php. Confermare il backup e premere Installa. La procedura crea soltanto le nuove tabelle e registra il nuovo pannello. È ripetibile su schema compatibile. DDL MySQL confermato per singola istruzione: in caso di errore verificare lo stato prima di ritentare.
-Nessuna tabella gestionale o utente viene cancellata o modificata. Non ripetere la migrazione utenti.
+Per un'installazione nuova aprire email_installazione.php come amministratore: la procedura crea le tabelle email dedicate senza modificare le anagrafiche o gli utenti. Non ripetere la migrazione utenti.
 
-## 2. Prepara un progetto Google di prova
+1. Creare un progetto Apps Script separato con l'account Gmail mittente e inserire email/Bridge.gs in Codice.gs.
+2. In Invio email > Configurazione generare una credenziale di 64 caratteri esadecimali e copiarla nella proprietà script BRIDGE_SECRET dello stesso progetto.
+3. Eseguire autorizzaPonte nell'editor Google e concedere le autorizzazioni. La funzione legge account e quota e non invia messaggi.
+4. Pubblicare come App web, Esegui come Me, accesso Chiunque. Copiare l'URL https://script.google.com/macros/s/.../exec; non usare /dev.
+5. Su Altervista inserire URL, indirizzo del medesimo account Gmail, nome visualizzato, dimensione lotto da 1 a 20 e la stessa credenziale del ponte.
+6. Salvare e usare Verifica connessione — nessuna email. L'impronta mostrata deve corrispondere a quella stampata da autorizzaPonte, senza pubblicare il segreto.
 
-1. Aprire https://script.google.com con l'account Gmail di prova.
-2. Creare un NUOVO progetto, ad esempio Ponte Gestione email - TEST. Non sostituire il vecchio progetto collegato al foglio.
-3. Nel file Codice.gs sostituire il contenuto iniziale con email/Bridge.gs del repository e salvare.
-4. Su Altervista aprire Servizi > Gestione email > Configurazione. Premere Genera nuova credenziale. Copiarla senza comunicarla in chat.
-5. In Apps Script aprire Impostazioni progetto > Proprietà script > Aggiungi proprietà. Nome BRIDGE_SECRET, valore la credenziale appena generata. Salvare.
-6. Nell'editor scegliere la funzione autorizzaPonte e premere Esegui. Concedere le autorizzazioni al proprio progetto verificandone nome e account. Questa funzione legge account/quota e NON spedisce email.
-7. Distribuisci > Nuovo deployment > tipo App web. Esegui come: Me; accesso: Chiunque. Alcuni account di organizzazione possono vietare l'accesso anonimo: in quel caso non usare un deployment che richiede il login come se fosse il ponte pubblico.
-8. Copiare l'URL che inizia con https://script.google.com/macros/s/ e termina con /exec, non /dev.
-Il ponte pubblico richiede POST firmati: conoscere l'URL non autorizza l'invio. Non condivide il Foglio Google e non richiede password Gmail sul sito.
+Il ponte richiede richieste POST firmate HMAC, controlla mittente, timestamp e nonce e restituisce risposte firmate. Il trasporto verifica TLS e accetta i redirect di risposta solo sul dominio Google previsto, senza inoltrare la richiesta firmata al redirect. La credenziale sta in private/email_<riferimento>.php, non nel database. Fare backup di questi file e conservarli per le campagne pendenti. La cartella private deve rimanere protetta da .htaccess.
 
-## 3. Configura Altervista
+Cambiare solo nome o lotto non richiede rigenerare la credenziale: lasciare vuoto il campo per conservare quella attuale. Per cambiare account/progetto salvare una nuova configurazione e mantenere i vecchi progetti e segreti finché servono agli invii già preparati. Le campagne mantengono la configurazione associata al momento della preparazione.
 
-Nella configurazione del modulo inserire:
-- URL /exec del nuovo progetto;
-- mittente: indirizzo dell'account che possiede ed esegue lo script (deve corrispondere);
-- nome visualizzato;
-- modalità TEST;
-- destinatario di prova: un indirizzo controllato da te;
-- lotto: da 1 a 20;
-- la stessa credenziale impostata in BRIDGE_SECRET.
+## Prova tramite ente o soggetto di prova
 
-Salvare la configurazione. Il sito conserva la credenziale in un file PHP protetto private/email_<riferimento>.php, mai nelle tabelle email né nel repository. La cartella private deve essere scrivibile da PHP e mantenere .htaccess. Non modificare la chiave di security.php: serve anche a rendere validi i collegamenti delle conferme.
-Premere Test connessione: verifica account, firma delle risposte e quota; non invia email. Questo è il test effettivo Altervista > Google, non una semplice verifica della whitelist. Seguendo i redirect di ContentService vengono accettate solo risposte da script.googleusercontent.com: il corpo con dati e firma non viene inoltrato ai redirect.
-Solo se riesce e se lo desideri, confermare e premere Invia email di prova. Si tratta di un singolo invio reale al solo destinatario di prova, registrato separatamente. La costruzione e i test automatici NON inviano email reali.
+1. In Anagrafica creare o aprire un ente di prova. Nella modale Email / PEC aggiungere un indirizzo di posta ordinaria controllato da chi effettua la prova. In alternativa associare quell'indirizzo al soggetto di prova LR o AS.
+2. Aprire Invio email > Destinatari e messaggio > Nuovo messaggio. Premere Nessuno, cercare l'ente/soggetto di prova e selezionare soltanto il suo indirizzo.
+3. Inserire oggetto e testo, per esempio PROVA INVIO GESTIONALE e Buongiorno {nome}. Aprire l'anteprima se necessario.
+4. Premere Salva bozza e destinatari. Controllare che il destinatario sia uno solo e che l'indirizzo sia quello desiderato.
+5. Confermare testo e destinatari, quindi Prepara campagna senza inviare. Non viene ancora spedita nessuna email.
+6. In Invii e conferme controllare l'Indirizzo effettivo della campagna. Confermare e premere Invia prossimo lotto. Per questa prova è possibile impostare lotto 1 prima di preparare la campagna.
+7. Verificare il registro e la ricezione nella casella, anche nello spam. Lo stato inviato conferma la spedizione accettata dal ponte, non il recapito nella casella.
+8. Aprire il link ricevuto e premere Confermo la lettura. Ricaricare il registro per vedere la data. La sola apertura del link non registra conferme e non prova automaticamente chi lo ha utilizzato.
 
-Se il test fallisce: controllare URL /exec, accesso Chiunque, Esegui come Me, autorizzazione, credenziale identica, account esatto e connessioni server-to-server verso Google. Non disabilitare TLS e non inserire password Gmail come credenziale del ponte.
+## Uso e conservazione
 
-## 4. Uso ordinario
+La selezione legge Mail, Associazioni, Soggetti e le liste attuali; non li modifica. Ogni bozza copia nominativi e indirizzi in email_destinatari, separata dai dati importati. Gli indirizzi uguali vengono accorpati; gli indirizzi invalidi o senza collegamento all'ente non sono selezionabili. Il segnaposto {nome} viene sostituito all'invio; il link di conferma viene aggiunto dal server.
 
-1. Destinatari e messaggio: selezionare gli indirizzi desiderati. Seleziona visibili opera soltanto sui risultati dei filtri. Nessuno azzera tutta la selezione.
-2. Indirizzi uguali (normalizzati in minuscolo) sono accorpati nella bozza; prevale il primo nominativo secondo ID Mail. Indirizzi non validi o senza ente collegato sono disabilitati.
-3. Inserire oggetto e testo, usare {nome}, formattare e visualizzare l'anteprima. Il testo incollato è trattato come testo semplice; il server applica una whitelist HTML. Non sono supportati immagini/allegati.
-4. Salvare bozza e destinatari. L'anteprima è dimostrativa e non registra conferme.
-5. Preparare la campagna: congela testo, nominativi, indirizzi e versione configurazione. NON invia.
-6. Aprire Invii e conferme, verificare modalità/mittente, confermare e premere Invia prossimo lotto.
-7. In TEST, ogni messaggio è inviato esclusivamente all'indirizzo di prova, con prefisso TEST. Le email dei nominativi non vengono usate come destinatari effettivi.
-8. Riprendere i lotti rimanenti. La quota è quella restituita da Google; un account consumer ha limiti più bassi di Workspace, e le quote possono variare.
-9. Gli stati in_corso o da_verificare non vengono reinviati automaticamente. Verifica esiti interroga il registro del ponte senza spedire. Se il ponte non può accertare l'esito, controllare le esecuzioni Google prima di qualsiasi eventuale nuovo messaggio.
-10. Il link personale porta a email_conferma.php, senza login e senza mostrare dati della rubrica. GET non conferma; occorre premere il pulsante POST. La conferma è idempotente; i nuovi link scadono dopo 365 giorni. Non è prova automatica di lettura/consegna e non identifica chi usa un link inoltrato.
+Preparare una campagna congela testo, destinatari e configurazione. Non è modificabile: per cambiare selezione creare una nuova bozza. Invio a lotti fino a 20 e nei limiti della quota restituita dal ponte. Ogni lotto richiede conferma esplicita; nessun invio avviene salvando una configurazione o una bozza.
 
-## 5. Modificare la configurazione in seguito
+Gli stati in_corso e da_verificare non vengono reinviati automaticamente: usare Verifica esiti senza reinviare. Non cancellare il registro job_* nel progetto Google mentre serve ad accertare un invio, perché previene duplicati dopo timeout. I link già spediti continuano a usare il relativo hash memorizzato; non cambiare security.php per modificare le impostazioni email.
 
-Ogni salvataggio crea una nuova versione; le campagne già preparate restano associate a quella precedente.
-Per cambiare solo modalità, nome o lotto si può riutilizzare la credenziale (campo vuoto). Per cambiare account o ruotare la credenziale, creare un progetto Google SEPARATO con un nuovo deployment e salvare una nuova versione su Altervista. Non modificare BRIDGE_SECRET dello stesso progetto mentre vecchie campagne devono ancora essere completate: i vecchi deployment condividono le proprietà del progetto.
-Conservare i vecchi deployment e private/email_*.php per le campagne pendenti. Le conferme dei messaggi già spediti rimangono su Altervista e non dipendono dal vecchio deployment.
-In PRODUZIONE è richiesta conferma esplicita in configurazione, poi una distinta conferma per ciascun lotto ai destinatari reali. Nessun automatismo converte le campagne di test già preparate.
-Le modifiche a anagrafiche, indirizzi e liste successive al salvataggio della bozza non alterano le sue copie; salvare nuovamente la bozza rilegge gli indirizzi selezionati. Un messaggio preparato non è modificabile.
+Admin e ghost autorizzato possono configurare il ponte. User deve ricevere il permesso gestione_email; lettura consente consultazione, scrittura consente preparazione e invio. Configurazione rimane riservata ad admin/ghost. Tutti i POST hanno controllo autorizzativo e CSRF; gli invii hanno anche un nonce monouso.
 
-## Permessi e conservazione
+I campi riservati usano includes/dati.php e il contratto di cifratura corrente. L'importazione SQLite non modifica le tabelle email. Conservare database, private/security.php, private/dati_security.php e private/email_*.php. Non sono previsti allegati, invii pianificati o reinvii automatici degli esiti incerti.
 
-Admin e ghost di sviluppo gestiscono configurazione e installazione. Un user parte senza alcun diritto alla nuova voce: assegnare lettura/scrittura da Servizi > Utenti. Lettura consente consultazione; scrittura anche preparazione/invio. La configurazione resta riservata ad admin/ghost anche se user ha scrittura.
-Tutti i POST amministrativi hanno CSRF; le azioni di invio hanno anche nonce monouso per bloccare doppio clic/replay. Il ponte usa HMAC SHA-256, timestamp e nonce, controlla il mittente e conserva un registro idempotente per ID invio.
-Non cancellare le proprietà job_* del progetto Google mentre potrebbero essere necessarie per verificare esiti incerti: il loro mantenimento evita reinvii. Anche Apps Script ha limiti di spazio e quote: in caso di saturazione il modulo si ferma, non cancella automaticamente il registro per far proseguire invii.
-Registro invii con date UTC. Google registra account e metadati necessari alla spedizione; il contenuto email transita su Google. Nessun foglio di contatti viene creato. Fare backup di nuove tabelle, security.php e private/email_*.php.
-Non sono previsti invio pianificato, allegati, editor di rubrica separata o ripristino automatico di invii incerti in questa versione.
+## Verifiche automatiche
 
-## Validazione
-
-CI: MySQL effimero e trasporto simulato, nessuna email reale; controlli su schema dedicato, anagrafiche immutate, sanitizzazione, bozze, copie destinatari, configurazioni versionate, isolamento TEST, lotti, firme/redirect, esiti incerti, nonce e conferme. Il ponte Apps Script viene eseguito in un ambiente simulato con MailApp fittizio. Il browser verifica editor, filtri, anteprima, salvataggio, mobile e permessi.
-Restano da eseguire dal proprietario: deployment Google, Test connessione sul server Altervista e singolo invio di prova autorizzato. Nessuna configurazione Gmail reale è stata inventata, nessun deployment Google è stato creato durante questa consegna.
-
-## Prova con un indirizzo presente nel database
-
-La modalità TEST legge i destinatari dal database ma invia soltanto all'indirizzo Destinatario di prova. Per verificare una consegna all'indirizzo effettivamente selezionato nella rubrica:
-
-1. Aprire /invio_email.php?tab=config come amministratore e impostare Produzione — destinatari reali, confermando l'uso dei destinatari reali. Impostare Dimensione lotto a 1 e salvare una nuova versione. Lasciare vuota la credenziale per conservarla se il ponte/account non cambiano.
-2. Premere Test connessione — nessuna email e attendere la conferma di connessione autenticata. Il test non spedisce messaggi.
-3. Aprire Destinatari e messaggio > Nuovo messaggio. Premere Nessuno, cercare un indirizzo di prova presente in rubrica e selezionare soltanto quello. Non usare una campagna già preparata in TEST: manterrebbe il vecchio destinatario effettivo.
-4. Scrivere un oggetto riconoscibile, per esempio PROVA INVIO DAL GESTIONALE, e il testo. Premere Salva bozza e destinatari.
-5. Controllare che la bozza contenga un solo destinatario. Confermare e premere Prepara campagna senza inviare.
-6. In Invii e conferme verificare che la campagna usi la nuova configurazione in produzione e che Indirizzo effettivo sia quello selezionato. Confermare l'invio e premere Invia prossimo lotto.
-7. Verificare stato inviato, ricezione nella casella (anche Spam) e presenza in Posta inviata dell'account Google mittente. Inviato significa che il ponte ha accettato la spedizione, non garantisce il recapito.
-8. Aprire il link ricevuto e premere Confermo la lettura; aggiornare il registro per verificare la data di conferma. Aprire soltanto il link non registra una conferma.
-9. Se si desidera tornare alle prove isolate, salvare una nuova configurazione in TEST. Le campagne già preparate restano associate alla loro configurazione originale: non cambiano modalità automaticamente.
-
-Per provare solo il collegamento Gmail senza coinvolgere gli indirizzi della rubrica, lasciare TEST e usare Invia email di prova dalla configurazione. Nessuna email viene inviata aggiornando il codice o eseguendo i test automatici.
-
-### Distribuzione della rinomina
-
-Dopo git pull --ff-only caricare invio_email.php, email_installazione.php, pannello.php e includes/layout.php con WinSCP. Eliminare manualmente dal server il vecchio file gestione_email.php; mantenere disattivata l'eliminazione automatica. Il codice permesso gestione_email, le tabelle, le configurazioni, le campagne e i link pubblici email_conferma.php non cambiano. Nessuna migrazione SQL e nessun aggiornamento del deployment Google richiesti per la sola rinomina.
+Su database effimero con trasporto simulato: invio solo agli indirizzi selezionati, oggetto non alterato, configurazione sempre produzione, rifiuto dei vecchi moduli, blocco delle campagne storiche senza chiamare il ponte, nessuna riscrittura dei vecchi destinatari, rifiuto di indirizzi effettivi divergenti o invii fuori rubrica, duplicati, lotti, firme, nonce e conferme. Verifiche browser di editor, configurazione senza campi/modalità rimossi, gestione credenziale mancante, mobile e permessi. Regressioni anche dopo cifratura. Nessun invio reale da CI.
