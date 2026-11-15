@@ -43,7 +43,8 @@
   clone.querySelectorAll('*').forEach(e=>[...e.attributes].forEach(a=>{if(!['href','style'].includes(a.name)||a.name==='href'&&!/^https?:\/\//i.test(a.value))e.removeAttribute(a.name);}));
   const walker=document.createTreeWalker(clone,NodeFilter.SHOW_TEXT);let node;while(node=walker.nextNode())node.textContent=node.textContent.replaceAll('{nome}',name);
   document.getElementById('email-preview-who').textContent=name+' · '+document.getElementById('email-subject').value;
-  document.getElementById('email-preview-frame').srcdoc='<html><body style="font:16px Arial;line-height:1.6;padding:18px">'+clone.innerHTML+'<p><span style="display:inline-block;padding:14px;background:#175cd3;color:white">Conferma la lettura</span></p></body></html>';
+  const receipt=document.querySelector('input[name="conferma_lettura"][type="checkbox"]')?.checked,receiptButton=receipt?'<p><span style="display:inline-block;padding:14px;background:#175cd3;color:white">Conferma la lettura</span></p>':'';
+  document.getElementById('email-preview-frame').srcdoc='<html><body style="font:16px Arial;line-height:1.6;padding:18px">'+clone.innerHTML+receiptButton+'</body></html>';
   document.getElementById('email-preview-dialog').showModal();
  });
  document.getElementById('email-preview-close').addEventListener('click',()=>document.getElementById('email-preview-dialog').close());
