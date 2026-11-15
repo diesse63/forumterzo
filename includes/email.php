@@ -6,13 +6,16 @@ require_once __DIR__.'/dati.php';
 function em_h($value): string {return htmlspecialchars((string)$value,ENT_QUOTES|ENT_SUBSTITUTE,'UTF-8');}
 function em_ready(PDO $p): bool {
  $q=$p->query("SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME IN ('email_configurazione','email_messaggi','email_destinatari','email_invii')");
- return (int)$q->fetchColumn()===4;
+ if((int)$q->fetchColumn()!==4)return false;
+ $q=$p->prepare("SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='email_messaggi' AND COLUMN_NAME='ConfermaLettura'");$q->execute();
+ if(!(int)$q->fetchColumn())$p->exec("ALTER TABLE email_messaggi ADD COLUMN ConfermaLettura TINYINT NOT NULL DEFAULT 1 AFTER Stato");
+ return true;
 }
 function em_install(PDO $p): void {
  if(!class_exists('DOMDocument'))throw new RuntimeException('Abilitare PHP DOM per l’editor email prima di installare il modulo.');
  $sql=file_get_contents(dirname(__DIR__).'/email/migrazione_v1.sql');
  foreach(explode(';',$sql) as $statement)if(trim($statement)!=='')$p->exec($statement);
- foreach(['email_configurazione'=>['ID','SegretoRef','VerificataIl'],'email_messaggi'=>['ID','Versione','ConfigID'],'email_destinatari'=>['ID','MailOrigineID','MessaggioID'],'email_invii'=>['ID','CodiceHash','ScadeIl','EmailEffettiva']] as $table=>$required){
+ foreach(['email_configurazione'=>['ID','SegretoRef','VerificataIl'],'email_messaggi'=>['ID','Versione','ConfigID','ConfermaLettura'],'email_destinatari'=>['ID','MailOrigineID','MessaggioID'],'email_invii'=>['ID','CodiceHash','ScadeIl','EmailEffettiva']] as $table=>$required){
   $q=$p->prepare('SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=?');$q->execute([$table]);
   if(array_diff($required,$q->fetchAll(PDO::FETCH_COLUMN)))throw new RuntimeException('Struttura delle nuove tabelle email non compatibile: '.$table);
  }
@@ -117,9 +120,9 @@ function em_save_draft(PDO $p,array $in): int {
   if($id){
    $old=dc_find($p,'email_messaggi',['ID'=>$id],true);
    if(!$old||$old['Stato']!=='bozza'||(int)$old['Versione']!==(int)($in['version']??0))throw new RuntimeException('Bozza già preparata o modificata in un’altra scheda.');
-   dc_update($p,'email_messaggi',['ID'=>$id],['Oggetto'=>$subject,'HTML'=>$html,'Testo'=>$text,'Versione'=>(int)$old['Versione']+1]);
+   dc_update($p,'email_messaggi',['ID'=>$id],['Oggetto'=>$subject,'HTML'=>$html,'Testo'=>$text,'ConfermaLettura'=>array_key_exists('conferma_lettura',$in)?(int)(bool)$in['conferma_lettura']:1,'Versione'=>(int)$old['Versione']+1]);
    $q=$p->prepare('DELETE FROM email_destinatari WHERE MessaggioID=?');$q->execute([$id]);
-  }else{$id=(int)dc_insert($p,'email_messaggi',['Oggetto'=>$subject,'HTML'=>$html,'Testo'=>$text]);}
+  }else{$id=(int)dc_insert($p,'email_messaggi',['Oggetto'=>$subject,'HTML'=>$html,'Testo'=>$text,'ConfermaLettura'=>array_key_exists('conferma_lettura',$in)?(int)(bool)$in['conferma_lettura']:1]);}
   foreach($selected as $email=>$c)dc_insert($p,'email_destinatari',['MessaggioID'=>$id,'MailOrigineID'=>$c['ID'],'Nome'=>$c['Nome'],'Email'=>$email,'Tipo'=>$c['TipoSoggetto'],'Ente'=>$c['Ente']]);
   $p->commit();return $id;
  }catch(Throwable $e){if($p->inTransaction())$p->rollBack();throw $e;}
@@ -160,10 +163,10 @@ function em_payload(array $row,array $config): array {
  em_require_production($config);
  if(empty($row['MailOrigineID'])||!in_array($row['Tipo']??'', ['ASSOCIAZIONE','REFERENTE','ALTRO'],true)||!filter_var($row['Email']??'',FILTER_VALIDATE_EMAIL)||strtolower(trim((string)($row['EmailEffettiva']??'')))!==strtolower(trim((string)$row['Email'])))throw new RuntimeException('Destinatario effettivo non coerente con la rubrica congelata. Creare una nuova campagna; nessun invio effettuato.');
  if(!isset($row['CodiceHash'])||!hash_equals((string)$row['CodiceHash'],hash('sha256',em_token($row['ID']))))throw new RuntimeException('Invio preparato con una chiave utenti diversa. Ricreare la campagna come nuova bozza; non reinviare gli esiti incerti.');
- $name=$row['Nome'];$link='https://poimanager.altervista.org/email_conferma.php?t='.em_token($row['ID']);
+ $name=$row['Nome'];$withReceipt=(int)($row['ConfermaLettura']??1)===1;$link='https://poimanager.altervista.org/email_conferma.php?t='.em_token($row['ID']);
  $html=str_replace('{nome}',em_h($name),$row['HTML']);$text=str_replace('{nome}',$name,$row['Testo']);
  $subject=$row['Oggetto'];
- return ['op'=>'send','job'=>$row['ID'],'to'=>$row['EmailEffettiva'],'subject'=>$subject,'name'=>$config['NomeMittente'],'text'=>$text."\n\nConferma la lettura: ".$link."\nLink personale: non inoltrarlo.",'html'=>'<div style="font-family:Arial,sans-serif;font-size:16px;line-height:1.6">'.$html.'<p><a href="'.em_h($link).'" style="display:inline-block;padding:14px 22px;background:#175cd3;color:#fff;text-decoration:none;border-radius:8px">Conferma la lettura</a></p><p>Link personale: non inoltrarlo.</p></div>'];
+ return ['op'=>'send','job'=>$row['ID'],'to'=>$row['EmailEffettiva'],'subject'=>$subject,'name'=>$config['NomeMittente'],'text'=>$withReceipt?$text."\n\nConferma la lettura: ".$link."\nLink personale: non inoltrarlo.":$text,'html'=>'<div style="font-family:Arial,sans-serif;font-size:16px;line-height:1.6">'.$html.($withReceipt?'<p><a href="'.em_h($link).'" style="display:inline-block;padding:14px 22px;background:#175cd3;color:#fff;text-decoration:none;border-radius:8px">Conferma la lettura</a></p><p>Link personale: non inoltrarlo.</p>':'').'</div>'];
 }
 function em_send_batch(PDO $p,int $id,?callable $bridge=null): array {
  $bridge??='em_bridge_call';$lock='email_send_'.$id;$q=$p->prepare('SELECT GET_LOCK(?,0)');$q->execute([$lock]);if((int)$q->fetchColumn()!==1)throw new RuntimeException('Invio già in corso per questa campagna.');
@@ -278,7 +281,7 @@ function em_duplicate(PDO $p,int $id,bool $withRecipients):int {
   $source=dc_find($p,'email_messaggi',['ID'=>$id],true);if(!$source)throw new RuntimeException('Mail non trovata.');
   $dest=$withRecipients?dc_rows($p,'email_destinatari','WHERE MessaggioID=?',[$id]):[];
   $resolved=em_resolve_recipients($p,array_filter(array_column($dest,'MailOrigineID')),false);
-  $new=(int)dc_insert($p,'email_messaggi',['Oggetto'=>$source['Oggetto'],'HTML'=>em_sanitize($source['HTML']),'Testo'=>$source['Testo']]);
+  $new=(int)dc_insert($p,'email_messaggi',['Oggetto'=>$source['Oggetto'],'HTML'=>em_sanitize($source['HTML']),'Testo'=>$source['Testo'],'ConfermaLettura'=>(int)($source['ConfermaLettura']??1)]);
   foreach($resolved as $email=>$c)dc_insert($p,'email_destinatari',['MessaggioID'=>$new,'MailOrigineID'=>$c['ID'],'Nome'=>$c['Nome'],'Email'=>$email,'Tipo'=>$c['TipoSoggetto'],'Ente'=>$c['Ente']]);
   $p->commit();return $new;
  }catch(Throwable $e){if($p->inTransaction())$p->rollBack();throw $e;}
