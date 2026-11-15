@@ -46,7 +46,7 @@ try{
 }
 $config=em_config($p);$draft=null;$dest=[];$logs=[];$campaigns=em_campaigns($p);
 if($id){$draft=dc_find($p,'email_messaggi',['ID'=>$id]);$dest=dc_rows($p,'email_destinatari','WHERE MessaggioID=? ORDER BY ID',[$id]);}
-$frozen=$draft&&$draft['Stato']==='preparato';$editable=$write&&!$frozen;
+$frozen=$draft&&$draft['Stato']==='preparato';$editable=$write;
 $contacts=$tab==='componi'?em_address_book($p):[];$selected=array_map('intval',array_column($dest,'MailOrigineID'));
 $tipi=$tab==='componi'?dc_rows($p,'Tipologia'):[];usort($tipi,fn($a,$b)=>strnatcasecmp($a['Tipologia'],$b['Tipologia']));
 $lists=$tab==='componi'?dc_rows($p,'MailList'):[];usort($lists,fn($a,$b)=>strnatcasecmp($a['Descrizione'],$b['Descrizione']));

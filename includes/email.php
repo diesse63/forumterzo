@@ -120,8 +120,9 @@ function em_save_draft(PDO $p,array $in): int {
  try{
   if($id){
    $old=dc_find($p,'email_messaggi',['ID'=>$id],true);
-   if(!$old||$old['Stato']!=='bozza'||(int)$old['Versione']!==(int)($in['version']??0))throw new RuntimeException('Bozza già preparata o modificata in un’altra scheda.');
-   dc_update($p,'email_messaggi',['ID'=>$id],['Oggetto'=>$subject,'HTML'=>$html,'Testo'=>$text,'ConfermaLettura'=>array_key_exists('conferma_lettura',$in)?(int)(bool)$in['conferma_lettura']:1,'Versione'=>(int)$old['Versione']+1]);
+   if(!$old||!in_array($old['Stato'],['bozza','preparato'],true)||(int)$old['Versione']!==(int)($in['version']??0))throw new RuntimeException('Bozza già modificata in un’altra scheda.');
+   if($old['Stato']==='preparato'){$q=$p->prepare("SELECT COUNT(*) FROM email_invii WHERE MessaggioID=? AND Stato='inviato'");$q->execute([$id]);if((int)$q->fetchColumn()>0)throw new RuntimeException('La campagna contiene email già inviate: duplicarla per apportare modifiche.');$q=$p->prepare('DELETE FROM email_invii WHERE MessaggioID=?');$q->execute([$id]);}
+   dc_update($p,'email_messaggi',['ID'=>$id],['Oggetto'=>$subject,'HTML'=>$html,'Testo'=>$text,'Stato'=>'bozza','ConfigID'=>null,'ConfermaLettura'=>array_key_exists('conferma_lettura',$in)?(int)(bool)$in['conferma_lettura']:1,'Versione'=>(int)$old['Versione']+1]);
    $q=$p->prepare('DELETE FROM email_destinatari WHERE MessaggioID=?');$q->execute([$id]);
   }else{$id=(int)dc_insert($p,'email_messaggi',['Oggetto'=>$subject,'HTML'=>$html,'Testo'=>$text,'ConfermaLettura'=>array_key_exists('conferma_lettura',$in)?(int)(bool)$in['conferma_lettura']:1]);}
   foreach($selected as $email=>$c)dc_insert($p,'email_destinatari',['MessaggioID'=>$id,'MailOrigineID'=>$c['ID'],'Nome'=>$c['Nome'],'Email'=>$email,'Tipo'=>$c['TipoSoggetto'],'Ente'=>$c['Ente']]);

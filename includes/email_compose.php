@@ -4,11 +4,11 @@ if($frozen){foreach($dest as $d)$initial[]=['ID'=>(int)$d['MailOrigineID'],'Nome
 else{foreach($contacts as $c)if(isset($wanted[(int)$c['ID']]))$initial[$c['Indirizzo']]=$c;$initial=array_values($initial);}
 ?>
 <?php if(isset($_GET['duplicato'])):?><aside role="status">Copia creata come nuova bozza, senza invii o conferme. Gli eventuali destinatari sono stati riletti dalla rubrica attuale.</aside><?php endif;?>
-<?php if($frozen):?><aside>Mail già elaborata: contenuto e destinatari dell’invio sono congelati. La rubrica resta aggiornata; per apportare modifiche duplica la mail dall’archivio.</aside><?php endif;?>
+<?php if($frozen):?><aside>Mail già elaborata: modificando e salvando contenuto o destinatari la campagna tornerà in stato Bozza. Le email già inviate non possono essere modificate.</aside><?php endif;?>
 <form method="post" id="email-compose" data-editable="<?=$editable?'1':'0'?>" data-frozen="<?=$frozen?'1':'0'?>">
 <input type="hidden" name="csrf" value="<?=em_h(csrf())?>"><input type="hidden" name="action" value="save"><input type="hidden" name="id" value="<?=$id?>"><input type="hidden" name="version" value="<?=(int)($draft['Versione']??0)?>">
 <section class="email-card email-message-card" id="email-message-card"><h2>Mail</h2>
-<p class="email-muted">Le bozze si possono modificare; le mail già elaborate o inviate si aprono in consultazione e possono essere duplicate dall’archivio.</p>
+<p class="email-muted">Le bozze e le campagne elaborate non ancora inviate si possono modificare; le email già inviate restano in consultazione e possono essere duplicate dall’archivio.</p>
 <label>Oggetto<input name="subject" id="email-subject" maxlength="250" value="<?=em_h($draft['Oggetto']??'')?>" <?=$editable?'':'disabled'?>></label>
 <div id="email-toolbar" class="email-toolbar" hidden><button type="button" data-command="bold"><b>G</b></button><button type="button" data-command="italic"><i>C</i></button><button type="button" data-command="underline"><u>S</u></button><button type="button" data-command="insertUnorderedList">• Elenco</button><button type="button" data-command="insertOrderedList">1. Elenco</button><button type="button" id="email-link">Link</button><button type="button" id="email-name">{nome}</button><label>Colore<input type="color" id="email-color" value="#175cd3"></label><button type="button" data-command="removeFormat">Togli formato</button></div>
 <div id="email-editor" role="textbox" aria-label="Testo formattato" aria-multiline="true" hidden><?=$draft?em_sanitize($draft['HTML']):'<p>Buongiorno {nome},</p><p></p>'?></div>
