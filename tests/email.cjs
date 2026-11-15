@@ -9,14 +9,14 @@ const {chromium}=require('playwright'),{spawn,execFileSync}=require('child_proce
   await page.goto(origin+'/login.php');await page.locator('input[name=nome]').fill('admin');await page.locator('input[name=password]').fill('1234567.');
   await Promise.all([page.waitForURL('**/pannello.php'),page.getByRole('button',{name:'Accedi',exact:true}).click()]);
   await page.goto(origin+'/invio_email.php');
-  check(await page.locator('h1').textContent()==='Invio mail','Titolo email');
+  check(await page.locator('h1').textContent()==='Gestione mail','Titolo email');
   await page.locator('.email-contact input:enabled').first().check();
   await page.locator('#email-subject').fill('BOZZA BROWSER');
   await page.locator('#email-editor').fill('Buongiorno {nome}, prova senza spedizione.');
   await page.getByRole('button',{name:'Anteprima',exact:true}).click();
   check(await page.locator('#email-preview-dialog').isVisible(),'Anteprima');
   await page.getByRole('button',{name:'Chiudi',exact:true}).click();
-  await Promise.all([page.waitForURL('**/invio_email.php?tab=componi&id=*&salvato=1'),page.getByRole('button',{name:'Salva bozza e destinatari'}).click()]);
+  await Promise.all([page.waitForURL('**/invio_email.php?tab=registro&id=*&salvato=1'),page.getByRole('button',{name:'Salva bozza e destinatari'}).click()]);
   check((await page.locator('body').textContent()).includes('Salvataggio completato'),'Salvataggio bozza');
   check(await page.locator('.email-tabs a').filter({hasText:'Configurazione'}).count()===0,'Configurazione ancora nella pagina invio');
   await page.getByRole('button',{name:'Servizi'}).click();
@@ -58,5 +58,6 @@ const {chromium}=require('playwright'),{spawn,execFileSync}=require('child_proce
   console.log('OK: pannello email, selezione, editor, bozza, anteprima, configurazione, mobile, conferma solo POST e permessi. Nessun invio reale.');
  }finally{if(browser)await browser.close();server.kill();}
 })().catch(e=>{console.error(e);process.exit(1)});
+
 
 
