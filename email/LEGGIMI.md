@@ -85,3 +85,12 @@ Ogni digitazione o cambio filtro ricalcola subito la lista e richiede una nuova 
 Anagrafica destinatari e Mail selezionate restano sulla stessa riga, con bordi superiori allineati anche scorrendo la pagina. Scorrono separatamente i contenuti delle liste; non c'è più il riquadro selezionati sticky. I CSS e gli script hanno una versione basata sul contenuto per evitare che la cache mantenga una vecchia versione dopo l'upload.
 
 Per questo aggiornamento caricare invio_email.php, email_rubrica.php, includes/email_compose.php, assets/email_destinatari.js e assets/email.css. Nessuna modifica alle tabelle o alle chiavi. Le prove browser includono ricerca per singolo nominativo in entrambe le viste, combinazione con la tipologia, lettura dal DB mentre si digita, aggiornamento automatico senza pulsanti e allineamento dei riquadri su desktop e mobile, prima e dopo cifratura.
+
+
+## Selezione di una mail salvata nella sezione Mail
+
+All'inizio del riquadro Mail il campo Mail salvata elenca tutte le mail, dalla più recente, con ID, oggetto (anche se vuoto) e stato. Scegliere una voce e premere Apri mail salvata per caricare testo e destinatari nella pagina. Nuova mail apre una composizione vuota. Il selettore usa una richiesta GET separata: non salva, non prepara e non invia messaggi.
+
+Una bozza rimane modificabile secondo i permessi; una mail elaborata, parzialmente inviata o inviata resta in consultazione, con destinatari congelati. Per riutilizzarla creare una copia dall'archivio. Quando ci sono modifiche non salvate, l'apertura di un'altra mail chiede conferma. La normale scrittura della bozza continua ad aggiornare la mail corrente, anche se nel selettore è stata scelta un'altra voce senza aprirla.
+
+Per questo aggiornamento caricare includes/email_compose.php, assets/email.js e assets/email.css dopo git pull. Nessuna modifica al database o alle credenziali. Le verifiche browser coprono riapertura di una bozza, annullamento dell'apertura con modifiche non salvate, associazione corretta del salvataggio e consultazione delle mail elaborate, anche con dati cifrati.
