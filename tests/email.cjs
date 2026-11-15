@@ -8,7 +8,7 @@ const {chromium}=require('playwright'),{spawn,execFileSync}=require('child_proce
   const page=await browser.newPage({viewport:{width:1280,height:950}}),origin='http://127.0.0.1:8101';
   await page.goto(origin+'/login.php');await page.locator('input[name=nome]').fill('admin');await page.locator('input[name=password]').fill('1234567.');
   await Promise.all([page.waitForURL('**/pannello.php'),page.getByRole('button',{name:'Accedi',exact:true}).click()]);
-  await page.goto(origin+'/invio_email.php');
+  await page.goto(origin+'/invio_email.php?tab=componi');
   check(await page.locator('h1').textContent()==='Gestione mail','Titolo email');
   await page.locator('.email-contact input:enabled').first().check();
   await page.locator('#email-subject').fill('BOZZA BROWSER');
@@ -35,7 +35,7 @@ const {chromium}=require('playwright'),{spawn,execFileSync}=require('child_proce
   try{
    await page.reload();check(await page.locator('input[name=secret]').count()===1&&(await page.locator('body').textContent()).includes('Credenziale privata non disponibile'),'Credenziale mancante blocca configurazione');
   }finally{fs.renameSync(secretPath+'.hold',secretPath);}
-  await page.setViewportSize({width:375,height:900});await page.goto(origin+'/invio_email.php');
+  await page.setViewportSize({width:375,height:900});await page.goto(origin+'/invio_email.php?tab=componi');
   check(!await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),'Overflow email mobile');
   const tokenCode="require 'includes/email.php'; $p=poimanager_db(); $r=$p->query(\"SELECT ID FROM email_invii WHERE Stato='inviato' AND ConfermatoIl IS NULL LIMIT 1\")->fetch(); if(!$r)exit(1); echo json_encode(['id'=>$r['ID'],'token'=>em_token($r['ID'])]);";
   const job=JSON.parse(execFileSync('php',['-r',tokenCode],{encoding:'utf8'}));
@@ -47,9 +47,9 @@ const {chromium}=require('playwright'),{spawn,execFileSync}=require('child_proce
   await page.goto(origin+'/logout.php');await page.getByRole('button',{name:'Conferma uscita'}).click();
   await page.locator('input[name=nome]').fill('user');await page.locator('input[name=password]').fill('1234567.');
   await Promise.all([page.waitForURL('**/pannello.php'),page.getByRole('button',{name:'Accedi',exact:true}).click()]);
-  await page.goto(origin+'/invio_email.php');
+  await page.goto(origin+'/invio_email.php?tab=componi');
   check(await page.getByRole('button',{name:'Salva bozza e destinatari'}).count()===0,'User lettura può salvare');
-  const forbidden=await page.request.post(origin+'/invio_email.php',{form:{action:'send',id:'1'}});
+  const forbidden=await page.request.post(origin+'/invio_email.php?tab=componi',{form:{action:'send',id:'1'}});
   check(forbidden.status()===403,'Invio user lettura ammesso');
   const config=await page.request.get(origin+'/invio_email.php?tab=config');check(config.status()===403,'Configurazione user ammessa');
   const dedicated=await page.request.get(origin+'/configurazione_mail.php');check(dedicated.status()===403,'Configurazione autonoma user ammessa');
