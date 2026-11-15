@@ -114,6 +114,7 @@ function em_sanitize(string $html): string {
 function em_save_draft(PDO $p,array $in): int {
  $subject=trim((string)($in['subject']??''));$text=trim((string)($in['text']??''));$html=em_sanitize((string)($in['html']??''));
  if(strlen($subject)>250||preg_match('/[\r\n]/',$subject)||strlen($text)>30000)throw new RuntimeException('Oggetto massimo 250 byte, senza ritorni a capo; testo massimo 30.000 byte.');
+ if($subject===''||$text==='')throw new RuntimeException('Salvataggio non eseguito: inserire sia l’oggetto sia il testo della mail.');
  $selected=em_resolve_recipients($p,$in['mail_ids']??[]);
  $id=(int)($in['id']??0);$p->beginTransaction();
  try{
