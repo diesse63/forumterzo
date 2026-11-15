@@ -41,6 +41,7 @@ window.initEmailRecipients=(form,editable)=>{
  let refreshTimer;
  const filtersChanged=()=>{render();clearTimeout(refreshTimer);refreshTimer=setTimeout(refresh,300);};
  Object.entries(controls).forEach(([k,c])=>c.addEventListener(k==='search'?'input':'change',filtersChanged));
+ controls.search.addEventListener('keydown',event=>{if(event.key==='Enter')event.preventDefault();});
  document.getElementById('email-all')?.addEventListener('click',()=>{for(const c of visible()){const key=c.Indirizzo.toLowerCase().trim();if(!selected.has(key))selected.set(key,c);}render();});
  document.getElementById('email-none')?.addEventListener('click',()=>{selected.clear();render();});
  let busy=false,queued=false,lastRefresh=Date.now();
