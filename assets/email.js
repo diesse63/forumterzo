@@ -5,6 +5,8 @@
   const bytes=new Uint8Array(32);crypto.getRandomValues(bytes);secret.value=[...bytes].map(n=>n.toString(16).padStart(2,'0')).join('');secret.type='text';
  });
  document.getElementById('email-show-secret')?.addEventListener('click',()=>{secret.type=secret.type==='password'?'text':'password';});
+ document.querySelectorAll('[data-confirm-action]').forEach(form=>form.addEventListener('submit',event=>{if(!window.confirm(form.dataset.confirmAction))event.preventDefault();}));
+ const autoScroll=document.getElementById('email-archive-auto-scroll');if(autoScroll){const go=()=>document.getElementById(autoScroll.dataset.scrollTo)?.scrollIntoView({block:'center',behavior:'auto'});if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>requestAnimationFrame(go),{once:true});else requestAnimationFrame(go);setTimeout(go,250);}
  const form=document.getElementById('email-compose');if(!form)return;
  const editable=form.dataset.editable==='1';
  const editor=document.getElementById('email-editor'),plain=document.getElementById('email-text'),html=document.getElementById('email-html');
