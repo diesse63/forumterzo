@@ -24,7 +24,7 @@ try{
   if($action==='send')em_consume_send_nonce((string)($_POST['send_nonce']??''));
   if($action==='save'){
    $input=$_POST;if(!isset($_POST['rich']))$input['html']='<p>'.nl2br(em_h((string)($_POST['text']??''))).'</p>';
-   $id=em_save_draft($p,$input);header('Location: /invio_email.php?tab=componi&id='.$id.'&salvato=1');exit;
+   $id=em_save_draft($p,$input);header('Location: /invio_email.php?tab=registro&id='.$id.'&salvato=1');exit;
   }elseif($action==='duplicate'){
    $source=dc_find($p,'email_messaggi',['ID'=>$id]);$subject=(string)($source['Oggetto']??'(Senza oggetto)');$duplicateSubject=trim((string)($_POST['duplicate_subject']??$subject));if($duplicateSubject!==''&&(strlen($duplicateSubject)>250||preg_match('/[\r\n]/',$duplicateSubject)))throw new RuntimeException('Nome della lista non valido: massimo 250 caratteri e nessun ritorno a capo.');$id=em_duplicate($p,$id,isset($_POST['copy_recipients'])&&$_POST['copy_recipients']==='1',$duplicateSubject);$message='Lista “'.$duplicateSubject.'” duplicata come nuova bozza.';$tab='registro';
   }elseif($action==='delete'){
