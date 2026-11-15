@@ -275,13 +275,13 @@ function em_address_book(PDO $p):array {
  }
  return $out;
 }
-function em_duplicate(PDO $p,int $id,bool $withRecipients):int {
+function em_duplicate(PDO $p,int $id,bool $withRecipients,?string $subject=null):int {
  $p->beginTransaction();
  try{
   $source=dc_find($p,'email_messaggi',['ID'=>$id],true);if(!$source)throw new RuntimeException('Mail non trovata.');
   $dest=$withRecipients?dc_rows($p,'email_destinatari','WHERE MessaggioID=?',[$id]):[];
   $resolved=em_resolve_recipients($p,array_filter(array_column($dest,'MailOrigineID')),false);
-  $new=(int)dc_insert($p,'email_messaggi',['Oggetto'=>$source['Oggetto'],'HTML'=>em_sanitize($source['HTML']),'Testo'=>$source['Testo'],'ConfermaLettura'=>(int)($source['ConfermaLettura']??1)]);
+  $new=(int)dc_insert($p,'email_messaggi',['Oggetto'=>$subject??$source['Oggetto'],'HTML'=>em_sanitize($source['HTML']),'Testo'=>$source['Testo'],'ConfermaLettura'=>(int)($source['ConfermaLettura']??1)]);
   foreach($resolved as $email=>$c)dc_insert($p,'email_destinatari',['MessaggioID'=>$new,'MailOrigineID'=>$c['ID'],'Nome'=>$c['Nome'],'Email'=>$email,'Tipo'=>$c['TipoSoggetto'],'Ente'=>$c['Ente']]);
   $p->commit();return $new;
  }catch(Throwable $e){if($p->inTransaction())$p->rollBack();throw $e;}
