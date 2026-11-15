@@ -1,8 +1,9 @@
 <?php if(!isset($campaigns,$write)){http_response_code(403);exit;}
 $aq=is_string($_GET['archivio_q']??null)?trim($_GET['archivio_q']):'';$ast=is_string($_GET['stato']??null)?$_GET['stato']:'';
 $archive=array_values(array_filter($campaigns,fn($r)=>($aq===''||dc_contains($r['Oggetto'],$aq))&&($ast===''||$r['StatoEtichetta']===$ast)));
-$stateCounts=array_fill_keys(['Bozza','Elaborata','Parzialmente inviata','Inviata','Da verificare'],0);foreach($campaigns as $campaign)$stateCounts[$campaign['StatoEtichetta']]++;
-$pending=array_values(array_filter($campaigns,fn($r)=>$r['StatoEtichetta']!=='Inviata'));
+$filteredArchive=$archive;
+$stateCounts=array_fill_keys(['Bozza','Elaborata','Parzialmente inviata','Inviata','Da verificare'],0);foreach($filteredArchive as $campaign)$stateCounts[$campaign['StatoEtichetta']]++;
+$pending=array_values(array_filter($filteredArchive,fn($r)=>$r['StatoEtichetta']!=='Inviata'));
 $pages=max(1,(int)ceil(count($archive)/20));$page=max(1,min($pages,(int)($_GET['archivio_pagina']??1)));$archive=array_slice($archive,($page-1)*20,20);
 ?>
 <section class="email-card"><form method="get" class="email-row"><input type="hidden" name="tab" value="registro"><label>Cerca oggetto<input name="archivio_q" value="<?=em_h($aq)?>" maxlength="250"></label><label>Stato<select name="stato"><option value="">Tutti</option><?php foreach(['Bozza','Elaborata','Parzialmente inviata','Inviata','Da verificare'] as $st):?><option value="<?=em_h($st)?>" <?=$st===$ast?'selected':''?>><?=em_h($st)?></option><?php endforeach;?></select></label><button>Cerca mail</button></form>
