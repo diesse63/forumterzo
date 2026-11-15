@@ -15,7 +15,7 @@
  form.addEventListener('submit',()=>{plain.value=editor.innerText;html.value=editor.innerHTML;});
  const selection=window.initEmailRecipients(form,editable);
  const initialSubject=document.getElementById('email-subject').value,initialHTML=editor.innerHTML;
- document.querySelectorAll('[data-email-focus]').forEach(link=>link.addEventListener('click',()=>{document.getElementById(link.dataset.emailFocus)?.focus();}));
+ document.querySelectorAll('[data-email-focus]').forEach(link=>link.addEventListener('click',event=>{event.preventDefault();const target=document.getElementById(link.dataset.emailFocus);target?.scrollIntoView({block:'center'});target?.focus({preventScroll:true});}));
  document.getElementById('email-prepare-form')?.addEventListener('submit',event=>{if(selection.hasChanged()||editor.innerHTML!==initialHTML||document.getElementById('email-subject').value!==initialSubject){event.preventDefault();alert('Salva la bozza prima di preparare: testo o destinatari sono stati modificati.');}});
  let savedRange=null;
  function saveRange(){const s=window.getSelection();if(s.rangeCount&&editor.contains(s.anchorNode))savedRange=s.getRangeAt(0).cloneRange();}
