@@ -48,9 +48,13 @@ function doPost(e) {
    var hash=bridgeHex_(Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256,JSON.stringify([p.to,p.subject,p.text,p.html,p.name]),Utilities.Charset.UTF_8));
    if(job){
     if(job.hash!==hash)throw new Error('Identificativo riutilizzato con contenuto diverso.');
-    result.status=job.status;return bridgeOutput_(result,secret);
+    // Solo un mancato invio certo permette un nuovo tentativo con lo stesso contenuto.
+    if(job.status!=='not_sent'){result.status=job.status;return bridgeOutput_(result,secret);}
    }
-   if(result.quota<1){result.status='not_sent';return bridgeOutput_(result,secret);}
+   if(result.quota<1){
+    props.setProperty(key,JSON.stringify({status:'not_sent',hash:hash,date:new Date().toISOString()}));
+    result.status='not_sent';return bridgeOutput_(result,secret);
+   }
    // La marcatura precedente all'invio impedisce reinvii dopo timeout o errori.
    props.setProperty(key,JSON.stringify({status:'uncertain',hash:hash,date:new Date().toISOString()}));
    try {

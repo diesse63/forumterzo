@@ -5,10 +5,10 @@ $user=require_access('gestione_email','lettura');
 require_once __DIR__.'/includes/email.php';
 if(!em_admin($user)){http_response_code(403);exit('Configurazione riservata agli amministratori.');}
 $p=poimanager_db();
-try{dc_active($p);}catch(RuntimeException $maintenance){page_start('Configurazione mail','Servizio temporaneamente in manutenzione.',['Servizi','Gestione mail','Configurazione mail']);echo '<aside>'.em_h($maintenance->getMessage()).'</aside></main></body></html>';exit;}
-if(!em_ready($p)){
+try{dc_active($p);$emailReady=em_ready($p);}catch(Throwable $maintenance){http_response_code(503);page_start('Configurazione mail','Servizio temporaneamente in manutenzione.',['Servizi','Gestione mail','Configurazione mail']);echo '<aside>'.em_h($maintenance instanceof PDOException?'Modulo email temporaneamente non disponibile. Verificare la connessione e i permessi del database.':$maintenance->getMessage()).'</aside></main></body></html>';exit;}
+if(!$emailReady){
  page_start('Configurazione mail','Configura il ponte Google e verifica la connessione.',['Servizi','Gestione mail','Configurazione mail']);
- echo '<aside>Il modulo email non è ancora installato.</aside><p><a href="/email_installazione.php">Installa le tabelle dedicate</a></p></main></body></html>';exit;
+ echo '<aside>Il modulo email non è installato o richiede un aggiornamento dello schema.</aside><p><a href="/email_installazione.php">Installa o aggiorna le tabelle email</a></p></main></body></html>';exit;
 }
 $message=$_SESSION['email_config_flash']??'';unset($_SESSION['email_config_flash']);
 try{

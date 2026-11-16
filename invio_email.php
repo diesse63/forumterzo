@@ -12,11 +12,11 @@ if(($_GET['tab']??'')==='config'||($_SERVER['REQUEST_METHOD']==='POST'&&in_array
 $tab=(string)($_GET['tab']??'registro');if(!in_array($tab,['componi','registro','esiti'],true))$tab='registro';
 if($tab==='registro'&&isset($_GET['esiti']))$tab='esiti';
 $message=$_SESSION['email_flash']??'';unset($_SESSION['email_flash']);$id=(int)($_POST['id']??$_GET['id']??0);$p=poimanager_db();
-try{dc_active($p);}catch(RuntimeException $maintenance){page_start('Gestione mail','Servizio temporaneamente in manutenzione.',['Servizi','Gestione mail','Gestione mail']);echo '<aside>'.em_h($maintenance->getMessage()).'</aside></main></body></html>';exit;}
-if(!em_ready($p)){
+try{dc_active($p);$emailReady=em_ready($p);}catch(Throwable $maintenance){http_response_code(503);page_start('Gestione mail','Servizio temporaneamente in manutenzione.',['Servizi','Gestione mail','Gestione mail']);echo '<aside>'.em_h($maintenance instanceof PDOException?'Modulo email temporaneamente non disponibile. Verificare la connessione e i permessi del database.':$maintenance->getMessage()).'</aside></main></body></html>';exit;}
+if(!$emailReady){
  page_start('Gestione mail','Messaggi, destinatari e conferme in un archivio dedicato.',['Servizi','Gestione mail','Gestione mail']);
- echo '<aside>Il modulo email non è ancora installato.</aside>';
- if($admin)echo '<p><a href="/email_installazione.php">Installa le tabelle dedicate</a></p>';
+ echo '<aside>Il modulo email non è installato o richiede un aggiornamento dello schema.</aside>';
+ if($admin)echo '<p><a href="/email_installazione.php">Installa o aggiorna le tabelle email</a></p>';
  echo '</main></body></html>';exit;
 }
 try{
@@ -40,7 +40,7 @@ try{
    if(!isset($_POST['confirm']))throw new RuntimeException('Confermare l’invio del lotto.');
    $r=em_send_batch($p,$id);$message=$r['notice']!==''?'Avviso invio: '.$r['notice']:'Invio completato correttamente.';$message='Inviate nel lotto: '.$r['sent'].'. '.$message;$tab='registro';
   }elseif($action==='status'){
-   $n=em_reconcile($p,$id);$message='Esiti recuperati dal ponte: '.$n.'. Gli esiti ancora incerti non vengono ritentati.';$tab='registro';
+   $n=em_reconcile($p,$id);$message='Esiti risolti dal ponte: '.$n.'. Gli invii confermati come non spediti sono pronti per un nuovo invio manuale. Gli esiti ancora incerti restano bloccati.';$tab='registro';
   }else throw new RuntimeException('Operazione non valida.');
   $_SESSION['email_flash']=$message;header('Location: /invio_email.php?tab='.urlencode($tab).'&id='.$id);exit;
  }
@@ -53,7 +53,7 @@ $frozen=$draft&&$draft['Stato']==='preparato';$editable=$write;
 $contacts=$tab==='componi'?em_address_book($p):[];$selected=array_map('intval',array_column($dest,'MailOrigineID'));
 $tipi=$tab==='componi'?dc_rows($p,'Tipologia'):[];usort($tipi,fn($a,$b)=>strnatcasecmp($a['Tipologia'],$b['Tipologia']));
 $lists=$tab==='componi'?dc_rows($p,'MailList'):[];usort($lists,fn($a,$b)=>strnatcasecmp($a['Descrizione'],$b['Descrizione']));
-if($tab==='registro'||$tab==='esiti')$logs=em_logs($p,$id);
+if($tab==='esiti'&&$id>0)$logs=em_logs($p,$id);
 
 $assetVersion=static function(string $path):string{$file=__DIR__.$path;return is_file($file)?substr((@hash_file('sha256',$file)?:'0'),0,12):'0';};
 $headingExtra=$config?'(Configurazione attiva #'.(int)$config['ID'].' · Mittente '.$config['Mittente'].'. Gli invii sono diretti agli indirizzi selezionati nell’anagrafica.)':'';

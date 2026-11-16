@@ -36,6 +36,7 @@ jobs:
           php tests/email.php
           php tests/email_diagnostica.php
           php tests/email_flusso.php
+          php tests/email_anomalie.php
           php tests/ghost.php
       - name: Compatibilità cifratura e HTTPS senza Sodium e cURL
         run: |
@@ -62,6 +63,7 @@ jobs:
           php -d disable_functions=sodium_crypto_secretbox,sodium_crypto_secretbox_open tests/cifratura.php
           node tests/cifratura.cjs
           php tests/email_flusso.php
+          php tests/email_anomalie.php
           FLUSSO_CIFRATO=1 node tests/email_flusso.cjs
           php tests/scheda.php
           SCHEDA_CIFRATA=1 node tests/scheda.cjs

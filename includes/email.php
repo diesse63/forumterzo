@@ -8,13 +8,15 @@ function em_ready(PDO $p): bool {
  $q=$p->query("SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME IN ('email_configurazione','email_messaggi','email_destinatari','email_invii')");
  if((int)$q->fetchColumn()!==4)return false;
  $q=$p->prepare("SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='email_messaggi' AND COLUMN_NAME='ConfermaLettura'");$q->execute();
- if(!(int)$q->fetchColumn())$p->exec("ALTER TABLE email_messaggi ADD COLUMN ConfermaLettura TINYINT NOT NULL DEFAULT 1 AFTER Stato");
- return true;
+ return (int)$q->fetchColumn()===1;
 }
 function em_install(PDO $p): void {
  if(!class_exists('DOMDocument'))throw new RuntimeException('Abilitare PHP DOM per l’editor email prima di installare il modulo.');
  $sql=file_get_contents(dirname(__DIR__).'/email/migrazione_v1.sql');
  foreach(explode(';',$sql) as $statement)if(trim($statement)!=='')$p->exec($statement);
+ // Gli aggiornamenti dello schema avvengono solo dalla procedura amministrativa esplicita.
+ $q=$p->query("SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='email_messaggi' AND COLUMN_NAME='ConfermaLettura'");
+ if(!(int)$q->fetchColumn())$p->exec("ALTER TABLE email_messaggi ADD COLUMN ConfermaLettura TINYINT NOT NULL DEFAULT 1 AFTER Stato");
  foreach(['email_configurazione'=>['ID','SegretoRef','VerificataIl'],'email_messaggi'=>['ID','Versione','ConfigID','ConfermaLettura'],'email_destinatari'=>['ID','MailOrigineID','MessaggioID'],'email_invii'=>['ID','CodiceHash','ScadeIl','EmailEffettiva']] as $table=>$required){
   $q=$p->prepare('SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=?');$q->execute([$table]);
   if(array_diff($required,$q->fetchAll(PDO::FETCH_COLUMN)))throw new RuntimeException('Struttura delle nuove tabelle email non compatibile: '.$table);
@@ -113,18 +115,20 @@ function em_save_draft(PDO $p,array $in): int {
  if(strlen($subject)>250||preg_match('/[\r\n]/',$subject)||strlen($text)>30000)throw new RuntimeException('Oggetto massimo 250 byte, senza ritorni a capo; testo massimo 30.000 byte.');
  if($subject===''||$text==='')throw new RuntimeException('Salvataggio non eseguito: inserire sia l’oggetto sia il testo della mail.');
  $selected=em_resolve_recipients($p,$in['mail_ids']??[]);
- $id=(int)($in['id']??0);$p->beginTransaction();
+ $id=(int)($in['id']??0);$lock=$id?em_campaign_lock($p,$id):null;
  try{
+  $p->beginTransaction();
   if($id){
    $old=dc_find($p,'email_messaggi',['ID'=>$id],true);
    if(!$old||!in_array($old['Stato'],['bozza','preparato'],true)||(int)$old['Versione']!==(int)($in['version']??0))throw new RuntimeException('Bozza già modificata in un’altra scheda.');
-   if($old['Stato']==='preparato'){$q=$p->prepare("SELECT COUNT(*) FROM email_invii WHERE MessaggioID=? AND Stato='inviato'");$q->execute([$id]);if((int)$q->fetchColumn()>0)throw new RuntimeException('La campagna contiene email già inviate: duplicarla per apportare modifiche.');$q=$p->prepare('DELETE FROM email_invii WHERE MessaggioID=?');$q->execute([$id]);}
+   if($old['Stato']==='preparato'){$q=$p->prepare("SELECT COUNT(*) FROM email_invii WHERE MessaggioID=? AND Stato IN ('inviato','in_corso','da_verificare')");$q->execute([$id]);if((int)$q->fetchColumn()>0)throw new RuntimeException('La campagna contiene email inviate o con esito incerto: verificare gli esiti o duplicarla per apportare modifiche.');$q=$p->prepare('DELETE FROM email_invii WHERE MessaggioID=?');$q->execute([$id]);}
    dc_update($p,'email_messaggi',['ID'=>$id],['Oggetto'=>$subject,'HTML'=>$html,'Testo'=>$text,'Stato'=>'bozza','ConfigID'=>null,'ConfermaLettura'=>array_key_exists('conferma_lettura',$in)?(int)(bool)$in['conferma_lettura']:1,'Versione'=>(int)$old['Versione']+1]);
    $q=$p->prepare('DELETE FROM email_destinatari WHERE MessaggioID=?');$q->execute([$id]);
   }else{$id=(int)dc_insert($p,'email_messaggi',['Oggetto'=>$subject,'HTML'=>$html,'Testo'=>$text,'ConfermaLettura'=>array_key_exists('conferma_lettura',$in)?(int)(bool)$in['conferma_lettura']:1]);}
   foreach($selected as $email=>$c)dc_insert($p,'email_destinatari',['MessaggioID'=>$id,'MailOrigineID'=>$c['ID'],'Nome'=>$c['Nome'],'Email'=>$email,'Tipo'=>$c['TipoSoggetto'],'Ente'=>$c['Ente']]);
   $p->commit();return $id;
  }catch(Throwable $e){if($p->inTransaction())$p->rollBack();throw $e;}
+ finally{if($lock!==null)em_campaign_unlock($p,$lock);}
 }
 function em_token(string $id): string {
  if(!defined('POIMANAGER_INTERNAL'))define('POIMANAGER_INTERNAL',true);
@@ -139,12 +143,22 @@ function em_campaign_sendable(PDO $p,int $id,array $config):bool {
  if(($config['Modalita']??'')!=='produzione')return false;
  $q=$p->prepare("SELECT COUNT(*) FROM email_destinatari WHERE MessaggioID=? AND (MailOrigineID IS NULL OR Tipo NOT IN ('ASSOCIAZIONE','REFERENTE','ALTRO'))");$q->execute([$id]);return (int)$q->fetchColumn()===0;
 }
+// Stesso lock per modifica, preparazione, invio, verifica ed eliminazione.
+function em_campaign_lock(PDO $p,int $id):string {
+ $lock='email_send_'.$id;$q=$p->prepare('SELECT GET_LOCK(?,0)');$q->execute([$lock]);
+ if((int)$q->fetchColumn()!==1)throw new RuntimeException('Operazione già in corso per questa campagna. Attendere e aggiornare il registro.');
+ return $lock;
+}
+function em_campaign_unlock(PDO $p,string $lock):void {
+ $q=$p->prepare('SELECT RELEASE_LOCK(?)');$q->execute([$lock]);
+}
 function em_prepare(PDO $p,int $id): int {
  $config=em_config($p);if(!$config)throw new RuntimeException('Salvare prima la configurazione mail.');
  if(!$config['VerificataIl']){$ping=em_ping($p,$config);$config=em_config($p,(int)$config['ID'])??$config;}
  em_require_production($config);
- $p->beginTransaction();
+ $lock=em_campaign_lock($p,$id);
  try{
+  $p->beginTransaction();
   $m=dc_find($p,'email_messaggi',['ID'=>$id],true);
   if(!$m)throw new RuntimeException('Messaggio non trovato.');
   if(!em_campaign_sendable($p,$id,$config))throw new RuntimeException('La campagna deve contenere soltanto destinatari selezionati dalla rubrica.');
@@ -158,6 +172,7 @@ function em_prepare(PDO $p,int $id): int {
   foreach($dest as $d){$job=bin2hex(random_bytes(16));$to=$d['Email'];dc_insert($p,'email_invii',['ID'=>$job,'MessaggioID'=>$id,'DestinatarioID'=>$d['ID'],'EmailEffettiva'=>$to,'CodiceHash'=>hash('sha256',em_token($job)),'ScadeIl'=>gmdate('Y-m-d H:i:s',time()+365*86400)]);}
   $q=$p->prepare("UPDATE email_messaggi SET Stato='preparato',ConfigID=?,Versione=Versione+1 WHERE ID=?");$q->execute([$config['ID'],$id]);$p->commit();return count($dest);
  }catch(Throwable $e){if($p->inTransaction())$p->rollBack();throw $e;}
+ finally{em_campaign_unlock($p,$lock);}
 }
 function em_payload(array $row,array $config): array {
  em_require_production($config);
@@ -169,7 +184,7 @@ function em_payload(array $row,array $config): array {
  return ['op'=>'send','job'=>$row['ID'],'to'=>$row['EmailEffettiva'],'subject'=>$subject,'name'=>$config['NomeMittente'],'text'=>$withReceipt?$text."\n\nConferma la lettura: ".$link."\nLink personale: non inoltrarlo.":$text,'html'=>'<div style="font-family:Arial,sans-serif;font-size:16px;line-height:1.6">'.$html.($withReceipt?'<p><a href="'.em_h($link).'" style="display:inline-block;padding:14px 22px;background:#175cd3;color:#fff;text-decoration:none;border-radius:8px">Conferma la lettura</a></p><p>Link personale: non inoltrarlo.</p>':'').'</div>'];
 }
 function em_send_batch(PDO $p,int $id,?callable $bridge=null): array {
- $bridge??='em_bridge_call';$lock='email_send_'.$id;$q=$p->prepare('SELECT GET_LOCK(?,0)');$q->execute([$lock]);if((int)$q->fetchColumn()!==1)throw new RuntimeException('Invio già in corso per questa campagna.');
+ $bridge??='em_bridge_call';$lock=em_campaign_lock($p,$id);
  $sent=0;$notice='';$start=time();
  try{
   $q=$p->prepare("SELECT m.*,c.Modalita FROM email_messaggi m JOIN email_configurazione c ON c.ID=m.ConfigID WHERE m.ID=? AND m.Stato='preparato'");$q->execute([$id]);$message=$q->fetch();if(!$message)throw new RuntimeException('Preparare prima il messaggio.');
@@ -203,9 +218,26 @@ function em_send_batch(PDO $p,int $id,?callable $bridge=null): array {
  }finally{$q=$p->prepare('SELECT RELEASE_LOCK(?)');$q->execute([$lock]);}
 }
 function em_reconcile(PDO $p,int $id,?callable $bridge=null): int {
- $bridge??='em_bridge_call';$q=$p->prepare("SELECT i.*,m.ConfigID FROM email_invii i JOIN email_messaggi m ON m.ID=i.MessaggioID WHERE i.MessaggioID=? AND (i.Stato='da_verificare' OR (i.Stato='in_corso' AND i.IniziatoIl<DATE_SUB(UTC_TIMESTAMP(),INTERVAL 5 MINUTE))) LIMIT 20");$q->execute([$id]);$rows=$q->fetchAll();$count=0;
- foreach($rows as $row){$c=em_config($p,(int)$row['ConfigID']);$r=$bridge($c,em_secret($c),['op'=>'status','job'=>$row['ID']]);if(($r['status']??'')==='sent'){$u=$p->prepare("UPDATE email_invii SET Stato='inviato',InviatoIl=COALESCE(InviatoIl,UTC_TIMESTAMP()),Nota='Confermato dal registro del ponte' WHERE ID=?");$u->execute([$row['ID']]);$count++;}}
- return $count;
+ $bridge??='em_bridge_call';$lock=em_campaign_lock($p,$id);$count=0;$start=time();
+ try{
+  $q=$p->prepare("SELECT i.ID,m.ConfigID FROM email_invii i JOIN email_messaggi m ON m.ID=i.MessaggioID WHERE i.MessaggioID=? AND (i.Stato='da_verificare' OR (i.Stato='in_corso' AND i.IniziatoIl<DATE_SUB(UTC_TIMESTAMP(),INTERVAL 5 MINUTE))) ORDER BY i.IniziatoIl,i.ID");$q->execute([$id]);$rows=$q->fetchAll();
+  foreach($rows as $row){
+   if(time()-$start>120)throw new RuntimeException('Tempo di verifica terminato. Gli esiti già risolti sono salvati; riprendere dal registro.');
+   $c=em_config($p,(int)$row['ConfigID']);
+   if(!$c)throw new RuntimeException('Configurazione della campagna non disponibile.');
+   $r=$bridge($c,em_secret($c),['op'=>'status','job'=>$row['ID']]);$status=$r['status']??'';
+   if($status==='sent'){
+    $u=$p->prepare("UPDATE email_invii SET Stato='inviato',InviatoIl=COALESCE(InviatoIl,UTC_TIMESTAMP()),Nota='Confermato dal registro del ponte' WHERE ID=? AND Stato IN ('in_corso','da_verificare')");$u->execute([$row['ID']]);$count+=$u->rowCount();
+   }elseif($status==='not_sent'){
+    // Solo un esito esplicito di mancato invio permette il successivo tentativo manuale.
+    $u=$p->prepare("UPDATE email_invii SET Stato='da_inviare',IniziatoIl=NULL,Nota='Mancato invio confermato dal ponte: pronto per un nuovo invio manuale' WHERE ID=? AND Stato IN ('in_corso','da_verificare') AND InviatoIl IS NULL AND ConfermatoIl IS NULL");$u->execute([$row['ID']]);$count+=$u->rowCount();
+   }else{
+    // unknown, uncertain o risposte non definitive non autorizzano mai un reinvio.
+    $u=$p->prepare("UPDATE email_invii SET Stato='da_verificare',Nota='Il ponte non conferma un esito definitivo. Nessun reinvio autorizzato.' WHERE ID=? AND Stato IN ('in_corso','da_verificare')");$u->execute([$row['ID']]);
+   }
+  }
+  return $count;
+ }finally{em_campaign_unlock($p,$lock);}
 }
 function em_confirm(PDO $p,string $token): bool {
  if(!preg_match('/^[a-f0-9]{64}$/D',$token))return false;
@@ -250,8 +282,9 @@ function em_campaigns(PDO $p):array {
  usort($out,fn($a,$b)=>(int)$b['ID']<=>(int)$a['ID']);return $out;
 }
 function em_logs(PDO $p,int $id=0):array {
- $rows=dc_rows($p,'email_invii',($id?'WHERE MessaggioID=? ':'').'ORDER BY IniziatoIl DESC,ID LIMIT 500',$id?[$id]:[]);
- foreach($rows as &$r){$d=dc_find($p,'email_destinatari',['ID'=>$r['DestinatarioID']]);$m=dc_find($p,'email_messaggi',['ID'=>$r['MessaggioID']]);$r['Nome']=$d['Nome'];$r['Email']=$d['Email'];$r['Ente']=$d['Ente']??'';$r['Oggetto']=$m['Oggetto'];}unset($r);return $rows;
+ $rows=dc_rows($p,'email_invii',($id?'WHERE MessaggioID=? ':'').'ORDER BY IniziatoIl DESC,ID',$id?[$id]:[]);
+ $messages=[];
+ foreach($rows as &$r){$d=dc_find($p,'email_destinatari',['ID'=>$r['DestinatarioID']]);$m=$messages[$r['MessaggioID']]??=dc_find($p,'email_messaggi',['ID'=>$r['MessaggioID']]);$r['Nome']=$d['Nome'];$r['Email']=$d['Email'];$r['Ente']=$d['Ente']??'';$r['Oggetto']=$m['Oggetto'];}unset($r);return $rows;
 }
 
 
