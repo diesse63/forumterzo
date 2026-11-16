@@ -80,6 +80,6 @@ function user_login(string $name,string $password): void {
  session_regenerate_id(true);$_SESSION=['account'=>$account+['time'=>time()],'csrf'=>bin2hex(random_bytes(32))];
 }
 require_once __DIR__.'/layout.php';
-function page_start(string $title, string $description='', array $context=[]): void {
- layout_start($title,$description,$context);
+function page_start(string $title, string $description='', array $context=[], string $headingExtra=''): void {
+ layout_start($title,$description,$context,$headingExtra);
 }

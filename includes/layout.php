@@ -4,7 +4,7 @@ declare(strict_types=1);
  * Tutte le pagine usano page_start() da auth.php.
  * I parametri espliciti prevalgono sui metadati delle pagine esistenti.
  */
-function layout_start(string $title, string $description='', array $context=[]): void {
+function layout_start(string $title, string $description='', array $context=[], string $headingExtra=''): void {
  $pages=[
   '/login.php'=>['Accesso','Accedi con il tuo nome utente e la password personale.',['Accesso']],
   '/pannello.php'=>['Pannello','Consulta le funzioni disponibili in base ai tuoi permessi.',['Pannello']],
@@ -32,8 +32,10 @@ function layout_start(string $title, string $description='', array $context=[]):
   $services=[];
   if(allowed($user,'utenti','scrittura'))$services[]=['label'=>'Utenti','url'=>'/utenti.php'];
   if(allowed($user,'importazione','scrittura'))$services[]=['label'=>'Importazione SQLite','url'=>'/importazione_sqlite/index.php'];
-  if(allowed($user,'gestione_email'))$services[]=['label'=>'Invio mail','url'=>'/invio_email.php'];
-  if(in_array($user['Ruolo'],['admin','ghost'],true))$services[]=['label'=>'Configurazione mail','url'=>'/configurazione_mail.php'];
+  $mail=[];
+  if(allowed($user,'gestione_email'))$mail[]=['label'=>'Invio mail','url'=>'/invio_email.php'];
+  if(in_array($user['Ruolo'],['admin','ghost'],true))$mail[]=['label'=>'Configurazione mail','url'=>'/configurazione_mail.php'];
+  if($mail)$services[]=['label'=>'Gestione mail','children'=>$mail];
   if(in_array($user['Ruolo'],['admin','ghost'],true))$services[]=['label'=>'Cifratura dati','url'=>'/cifratura_dati.php'];
   if($user['Ruolo']!=='ghost')$services[]=['label'=>'Cambia password','url'=>'/cambia_password.php'];
   if($services)$items[]=['label'=>'Servizi','children'=>$services];
@@ -43,18 +45,22 @@ function layout_start(string $title, string $description='', array $context=[]):
  }
  echo '<!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'.uh($title).' · Gestione</title><link rel="stylesheet" href="/assets/layout.css"><script src="/assets/menu.js" defer></script></head><body>';
  echo '<header class="app-header"><a class="app-name" href="'.($user?'/pannello.php':'/login.php').'">Gestione</a><p class="app-context">'.uh(implode(' › ',$context)).'</p></header>';
+ $renderMenu=function(array $menuItems,int $depth=0,string $prefix='')use(&$renderMenu,$context,$path):void{
+  foreach($menuItems as $i=>$item){
+   echo '<li class="menu-item">';
+   if(isset($item['children'])){
+    $suffix=$prefix===''?(string)$i:$prefix.'-'.$i;$id='submenu-'.$suffix;
+    $selected=($context[$depth]??'')===$item['label'];
+    echo '<button type="button" class="menu-toggle" data-menu-toggle aria-expanded="false" aria-controls="'.$id.'"'.($selected?' aria-current="true"':'').'>'.uh($item['label']).' <span aria-hidden="true">'.($depth===0?'▾':'›').'</span></button><ul class="submenu'.($depth>0?' submenu-nested':'').'" id="'.$id.'" hidden>';
+    $renderMenu($item['children'],$depth+1,$suffix);
+    echo '</ul>';
+   }else echo '<a class="menu-link" href="'.uh($item['url']).'"'.($path===$item['url']?' aria-current="page"':'').'>'.uh($item['label']).'</a>';
+   echo '</li>';
+  }
+ };
  echo '<nav class="app-nav" aria-label="Menu principale"><ul class="menu-bar" data-menubar>';
- foreach($items as $i=>$item){
-  echo '<li class="menu-item">';
-  if(isset($item['children'])){
-   $selected=($context[0]??'')===$item['label'];
-   echo '<button type="button" class="menu-toggle" data-menu-toggle aria-expanded="false" aria-controls="submenu-'.$i.'"'.($selected?' aria-current="true"':'').'>'.uh($item['label']).' <span aria-hidden="true">▾</span></button><ul class="submenu" id="submenu-'.$i.'" hidden>';
-   foreach($item['children'] as $child)echo '<li><a class="menu-link" href="'.uh($child['url']).'"'.($path===$child['url']?' aria-current="page"':'').'>'.uh($child['label']).'</a></li>';
-   echo '</ul>';
-  }else echo '<a class="menu-link" href="'.uh($item['url']).'"'.($path===$item['url']?' aria-current="page"':'').'>'.uh($item['label']).'</a>';
-  echo '</li>';
- }
- echo '</ul></nav><main class="page-main"><header class="page-heading"><h1 class="page-title">'.uh($title).'</h1><p class="page-description">'.uh($description).'</p></header>';
+ $renderMenu($items);
+ echo '</ul></nav><main class="page-main"><header class="page-heading"><div class="page-heading-copy"><h1 class="page-title">'.uh($title).'</h1><p class="page-description">'.uh($description).'</p></div>'.($headingExtra!==''?'<span class="page-heading-extra">'.uh($headingExtra).'</span>':'').'</header>';
 }
 
 

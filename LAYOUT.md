@@ -28,7 +28,7 @@ page_start('Associazioni', 'Consulta e aggiorna le associazioni registrate.', ['
 echo '</main></body></html>';
 ```
 
-Il menu mostra i collegamenti implementati consentiti all'utente. Servizi > Utenti apre /utenti.php; Servizi include anche Importazione SQLite e Cambia password secondo i permessi. Le future schermate vanno collegate al menu centrale con il controllo autorizzativo appropriato.
+Il menu mostra i collegamenti implementati consentiti all'utente. Servizi > Utenti apre /utenti.php; Servizi > Gestione mail contiene Invio mail e Configurazione mail. Importazione SQLite, Cifratura dati e Cambia password restano voci di Servizi secondo i permessi. Le future schermate vanno collegate al menu centrale con il controllo autorizzativo appropriato.
 Le risposte tecniche senza interfaccia (API, redirect, download, test di connessione testuale) non producono il layout HTML.
 
 ## Distribuzione
