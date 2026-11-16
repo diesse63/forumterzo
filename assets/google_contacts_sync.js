@@ -13,7 +13,9 @@
       const selectedLabel = normalize(label.value);
       let visible = 0;
       cards.forEach(card => {
-        const matchesText = !query || normalize(card.textContent).includes(query);
+        const searchableCard = card.cloneNode(true);
+        searchableCard.querySelector('.gcs-choice')?.remove();
+        const matchesText = !query || normalize(searchableCard.textContent).includes(query);
         const matchesStatus = selected === 'all' || card.dataset.gcsStatus === selected;
         const labels = [...card.querySelectorAll('.gcs-labels')].map(item => normalize(item.textContent));
         const matchesLabel = selectedLabel === 'all' || labels.some(value => value.includes(selectedLabel));
