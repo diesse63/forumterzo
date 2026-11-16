@@ -36,7 +36,7 @@ try{
    $count=em_prepare($p,$id);$message='Elaborazione completata: lista preparata per '.$count.' destinatari. Nessuna email è stata ancora spedita.';$tab='registro';
   }elseif($action==='send'){
    if(!isset($_POST['confirm']))throw new RuntimeException('Confermare l’invio del lotto.');
-   $r=em_send_batch($p,$id);$message='Inviate nel lotto: '.$r['sent'].'. '.$r['notice'];$tab='registro';
+   $r=em_send_batch($p,$id);$message=$r['notice']!==''?'Avviso invio: '.$r['notice']:'Invio completato correttamente.';$message='Inviate nel lotto: '.$r['sent'].'. '.$message;$tab='registro';
   }elseif($action==='status'){
    $n=em_reconcile($p,$id);$message='Esiti recuperati dal ponte: '.$n.'. Gli esiti ancora incerti non vengono ritentati.';$tab='registro';
   }else throw new RuntimeException('Operazione non valida.');
