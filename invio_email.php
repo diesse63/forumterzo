@@ -63,8 +63,6 @@ page_start('Gestione mail','Seleziona nominativi, prepara messaggi personali e c
 <?php require __DIR__.'/includes/email_compose.php';?>
 <?php elseif($tab==='registro'):?>
 <?php require __DIR__.'/includes/email_archivio.php';?>
-<div class="email-table-scroll"><table><tr><th>Messaggio</th><th>Destinatario</th><th>Indirizzo effettivo</th><th>Stato</th><th>Invio UTC</th><th>Conferma UTC</th></tr>
-<?php foreach($logs as $r):?><tr><td><?=em_h($r['Oggetto'])?></td><td><?=em_h($r['Nome'])?><small><?=em_h($r['Email'])?></small></td><td><?=em_h($r['EmailEffettiva'])?></td><td><?=em_h($r['Stato'])?><small><?=em_h($r['Nota'])?></small></td><td><?=em_h($r['InviatoIl']??'—')?></td><td><?=em_h($r['ConfermatoIl']??'—')?></td></tr><?php endforeach;?></table></div>
 <?php endif;?>
 <script src="/assets/email_destinatari.js?v=<?=em_h($assetVersion('/assets/email_destinatari.js'))?>" defer></script>
 <script src="/assets/email.js?v=<?=em_h($assetVersion('/assets/email.js'))?>" defer></script></main></body></html>
