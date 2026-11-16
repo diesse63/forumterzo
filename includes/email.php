@@ -251,7 +251,7 @@ function em_campaigns(PDO $p):array {
 }
 function em_logs(PDO $p,int $id=0):array {
  $rows=dc_rows($p,'email_invii',($id?'WHERE MessaggioID=? ':'').'ORDER BY IniziatoIl DESC,ID LIMIT 500',$id?[$id]:[]);
- foreach($rows as &$r){$d=dc_find($p,'email_destinatari',['ID'=>$r['DestinatarioID']]);$m=dc_find($p,'email_messaggi',['ID'=>$r['MessaggioID']]);$r['Nome']=$d['Nome'];$r['Email']=$d['Email'];$r['Oggetto']=$m['Oggetto'];}unset($r);return $rows;
+ foreach($rows as &$r){$d=dc_find($p,'email_destinatari',['ID'=>$r['DestinatarioID']]);$m=dc_find($p,'email_messaggi',['ID'=>$r['MessaggioID']]);$r['Nome']=$d['Nome'];$r['Email']=$d['Email'];$r['Ente']=$d['Ente']??'';$r['Oggetto']=$m['Oggetto'];}unset($r);return $rows;
 }
 
 
