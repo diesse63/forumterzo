@@ -71,5 +71,5 @@ if($error)echo '<aside class="error">'.uh($error).'</aside>';if($message)echo '<
 <?php if(!$snapshot['rows']):?><p class="gcs-empty-card">Nessun indirizzo email da confrontare.</p><?php endif;?></div>
 <?php if(allowed($user,'contacts_sync','scrittura')):?><label><input type="checkbox" name="confirm" value="1" required> Confermo le sole operazioni selezionate</label><button>Conferma e applica</button><?php else:?><aside>Permesso di sola lettura: per applicare scelte occorre il livello scrittura.</aside><?php endif;?></form><?php endif;?>
 <p><a href="/google_contacts_config.php">Configurazione del ponte autonomo</a>. Nessuna funzione del ponte email o della tabella temporanea contacts interviene in questa procedura.</p>
-<script src="/assets/google_contacts_sync.js" defer></script>
+<script src="/assets/google_contacts_sync.js?v=2" defer></script>
 </main></body></html>
