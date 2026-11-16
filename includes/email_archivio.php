@@ -14,7 +14,7 @@ $pages=max(1,(int)ceil(count($archive)/20));
 $defaultPage=$selected?intdiv((int)(array_search($selected,$archive,true)?:0),20)+1:1;
 $page=max(1,min($pages,(int)($_GET['archivio_pagina']??$defaultPage)));
 $visible=array_slice($archive,($page-1)*20,20);
-if($selected){echo '<input type="hidden" id="email-archive-prepared" value="'.($selected['Stato']==='preparato'?'1':'0').'">';echo '<input type="hidden" id="email-archive-results" value="'.($selected['StatoEtichetta']==='Inviata'&&!empty($selected['ConfermaLettura'])?'1':'0').'">';}
+if($selected){echo '<input type="hidden" id="email-archive-prepared" value="'.($selected['Stato']==='preparato'?'1':'0').'">';echo '<input type="hidden" id="email-archive-results" value="'.(in_array($selected['StatoEtichetta'],['Inviata','Parzialmente inviata'],true)&&!empty($selected['ConfermaLettura'])?'1':'0').'">';}
 ?>
 <section class="email-card email-archive-filter">
 <form method="get" class="email-row">
