@@ -32,7 +32,7 @@ $visible=array_slice($archive,($page-1)*20,20);
  $canResults=$selected['StatoEtichetta']==='Inviata'&&!empty($selected['ConfermaLettura']);
 ?>
 <section class="email-card email-archive-detail">
-<h2>#<?=(int)$selected['ID']?> · <?=em_h($selected['Oggetto']!==''?$selected['Oggetto']:'(Senza oggetto)')?></h2>
+<h2>#<?=(int)$selected['ID']?> · <?=em_h($selected['Oggetto']!==''?$selected['Oggetto']:'(Senza oggetto)')?> <small class="email-card-status"><?=em_h($selected['StatoEtichetta'])?></small></h2>
 <p class="email-archive-date"><?=em_h($selected['UltimoInvio']??$selected['CreatoIl']??'Data non disponibile')?></p>
 <p><strong><?=em_h($selected['StatoEtichetta'])?></strong> · Destinatari <?=(int)$selected['Destinatari']?> · Inviate <?=(int)$selected['Inviate']?> · Da verificare <?=(int)$selected['Incerte']?> · Conferma ricezione: <strong><?=!empty($selected['ConfermaLettura'])?'Attiva':'Non attiva'?></strong></p>
 <div class="email-archive-actions">
