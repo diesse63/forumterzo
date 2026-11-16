@@ -55,20 +55,17 @@ function em_save_config(PDO $p,array $in): int {
  if(isset($in['mode'])&&$in['mode']!=='produzione')throw new RuntimeException('Configurazione obsoleta: ricaricare la pagina. Gli invii usano gli indirizzi selezionati nell’anagrafica.');
  if(!filter_var($sender,FILTER_VALIDATE_EMAIL)||strlen($sender)>254)throw new RuntimeException('Inserire un indirizzo mittente valido.');
  if($batch<1||$batch>20||strlen($name)>200)throw new RuntimeException('Lotto da 1 a 20 e nome mittente fino a 200 caratteri.');
- $old=em_config($p);$secret=trim((string)($in['secret']??''));
+ $old=em_config($p);$secret=trim((string)($in['secret']??''));$reuseSecret=$secret===''&&$old&&is_file(em_secret_path((string)$old['SegretoRef']));
  if($secret===''){$secret=$old?em_secret($old):'';}
  if(!preg_match('/^[a-f0-9]{64}$/D',$secret))throw new RuntimeException('Generare una credenziale segreta di 64 caratteri esadecimali e copiarla nelle proprietà Apps Script.');
  $private=dirname(__DIR__).'/private';
  if(trim((string)@file_get_contents($private.'/.htaccess'))!=='Require all denied')throw new RuntimeException('Ripristinare la protezione private/.htaccess prima di salvare.');
- $ref=bin2hex(random_bytes(16));$file=em_secret_path($ref);$handle=@fopen($file,'x');
- if(!$handle)throw new RuntimeException('Cartella private non scrivibile: impossibile salvare la credenziale.');
- $bytes="<?php\nif (!defined('POIMANAGER_INTERNAL')) { http_response_code(403); exit; }\nreturn ".var_export($secret,true).";\n";
- try{if(fwrite($handle,$bytes)!==strlen($bytes))throw new RuntimeException('Salvataggio credenziale incompleto.');}finally{fclose($handle);}
- @chmod($file,0600);
+ $ref=$reuseSecret?(string)$old['SegretoRef']:bin2hex(random_bytes(16));$file=em_secret_path($ref);$created=false;
+ if(!$reuseSecret){$handle=@fopen($file,'x');if(!$handle)throw new RuntimeException('Cartella private non scrivibile: impossibile salvare la credenziale.');$bytes="<?php\nif (!defined('POIMANAGER_INTERNAL')) { http_response_code(403); exit; }\nreturn ".var_export($secret,true).";\n";try{if(fwrite($handle,$bytes)!==strlen($bytes))throw new RuntimeException('Salvataggio credenziale incompleto.');}finally{fclose($handle);}$created=true;@chmod($file,0600);}
  try{
   $p->beginTransaction();$p->exec('UPDATE email_configurazione SET Attiva=0 WHERE Attiva=1');
   $id=(int)dc_insert($p,'email_configurazione',['URLPonte'=>$url,'Mittente'=>$sender,'NomeMittente'=>$name,'Modalita'=>'produzione','EmailTest'=>'','Lotto'=>$batch,'SegretoRef'=>$ref]);$p->commit();return $id;
- }catch(Throwable $e){if($p->inTransaction())$p->rollBack();@unlink($file);throw $e;}
+ }catch(Throwable $e){if($p->inTransaction())$p->rollBack();if($created)@unlink($file);throw $e;}
 }
 function em_ping(PDO $p,array $config,?callable $bridge=null): array {
  $bridge??='em_bridge_call';$r=$bridge($config,em_secret($config),['op'=>'ping']);
