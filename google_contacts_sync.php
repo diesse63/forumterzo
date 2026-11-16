@@ -14,7 +14,7 @@ function gcs_snapshot(PDO $p,array $config):array{
  $rows=[];$emails=array_unique(array_merge(array_keys($db),array_keys($google)));sort($emails,SORT_NATURAL|SORT_FLAG_CASE);
  foreach($emails as $email){$d=$db[$email]??[];$g=$google[$email]??[];$status=count($d)>1||count($g)>1||($g&&count($g[0]['organizations']??[])>1)?'ambiguous':(!$d?'google_only':(!$g?'db_only':(gcs_norm_email($d[0]['label'])===gcs_norm_email($g[0]['title'])?'same':'different')));$rows[]=['key'=>substr(hash('sha256',$email),0,24),'email'=>$email,'db'=>$d,'google'=>$g,'status'=>$status];}
  $owners=[];foreach($rows as $i=>$r)foreach($r['google'] as $g)$owners[$g['resourceName']][]=$i;foreach($owners as $idx)if(count($idx)>1)foreach(array_unique($idx) as $i)$rows[$i]['status']='ambiguous';
- $options=[];foreach($entities as $id=>$label)$options[]=['id'=>$id,'label'=>$label];$labels=[];foreach($rows as $row)foreach($row['google'] as $g)foreach($g['labels']??[] as $label)$labels[$label]=true;ksort($labels,SORT_NATURAL|SORT_FLAG_CASE);
+ $options=[];foreach($entities as $id=>$label)$options[]=['id'=>$id,'label'=>$label];usort($options,static function(array $a,array $b):int{return strnatcasecmp($a['label'],$b['label']);});$labels=[];foreach($rows as $row)foreach($row['google'] as $g)foreach($g['labels']??[] as $label)$labels[$label]=true;ksort($labels,SORT_NATURAL|SORT_FLAG_CASE);
  return ['rows'=>$rows,'entities'=>$options,'labels'=>array_keys($labels),'created'=>time(),'account'=>$config['account']];
 }
 function gcs_apply(PDO $p,array $config,array $snapshot,array $choices):array{
