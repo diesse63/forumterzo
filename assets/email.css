@@ -25,5 +25,7 @@
 @media(max-width:760px){.email-archive-filter form label,.email-archive-filter form label:nth-of-type(2){flex-basis:100%}.email-archive-detail>.email-archive-actions>*{flex:0 0 auto!important}}
 .email-card-status{font-size:13px;font-weight:400;color:#506879;white-space:nowrap}
 .email-results-button{display:inline-block;padding:10px 16px;margin:6px 0;border-radius:6px;background:#155a86;color:#fff;text-decoration:none;text-align:center;white-space:nowrap}
+.email-results-actions{display:flex;align-items:center;gap:10px;margin-top:16px}.email-results-actions form{margin:0}.email-results-actions button,.email-results-actions .email-view-message{margin:0;white-space:nowrap}
+.email-toast{position:fixed;right:22px;bottom:22px;z-index:20;margin:0;max-width:min(520px,calc(100% - 44px));box-shadow:0 5px 18px #16344a33}
 .email-archive-detail>.email-archive-actions .email-results-button{display:block;width:100%;margin:0;padding:10px 8px}
 .email-archive-detail>.email-archive-actions .email-results-button{width:auto;flex:0 0 auto!important}

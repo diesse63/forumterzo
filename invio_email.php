@@ -29,7 +29,7 @@ try{
   }elseif($action==='duplicate'){
    $source=dc_find($p,'email_messaggi',['ID'=>$id]);$subject=(string)($source['Oggetto']??'(Senza oggetto)');$duplicateSubject=trim((string)($_POST['duplicate_subject']??$subject));if($duplicateSubject!==''&&(strlen($duplicateSubject)>250||preg_match('/[\r\n]/',$duplicateSubject)))throw new RuntimeException('Nome della lista non valido: massimo 250 caratteri e nessun ritorno a capo.');$id=em_duplicate($p,$id,isset($_POST['copy_recipients'])&&$_POST['copy_recipients']==='1',$duplicateSubject);$message='Lista “'.$duplicateSubject.'” duplicata come nuova bozza.';$tab='registro';
   }elseif($action==='reminder'){
-   $newId=em_duplicate_reminder($p,$id);$message='Lista di sollecito creata come nuova bozza.';$id=$newId;$tab='registro';
+   $newId=em_duplicate_reminder($p,$id);$message='Sollecito creato con successo come nuova bozza.';$id=$newId;$tab='registro';
   }elseif($action==='delete'){
    if(!isset($_POST['confirm']))throw new RuntimeException('Confermare l’eliminazione della mail e del relativo registro.');
    $source=dc_find($p,'email_messaggi',['ID'=>$id]);$subject=(string)($source['Oggetto']??'(Senza oggetto)');em_delete($p,$id,(int)($_POST['version']??0));$id=0;$tab='registro';$message='Lista “'.$subject.'” eliminata dal gestionale. Le email già spedite non sono state ritirate.';
@@ -45,7 +45,7 @@ try{
   $_SESSION['email_flash']=$message;header('Location: /invio_email.php?tab='.urlencode($tab).'&id='.$id);exit;
  }
 }catch(Throwable $e){
- $message=$e instanceof PDOException?'Operazione email non completata. Verificare le tabelle dedicate e riprovare senza duplicare invii con esito incerto.':$e->getMessage();
+ $message=($action??'')==='reminder'?'Errore sollecito: '.$e->getMessage():($e instanceof PDOException?'Operazione email non completata. Verificare le tabelle dedicate e riprovare senza duplicare invii con esito incerto.':$e->getMessage());
 }
 $config=em_config($p);$draft=null;$dest=[];$logs=[];$campaigns=em_campaigns($p);
 if($id){$draft=dc_find($p,'email_messaggi',['ID'=>$id]);$dest=dc_rows($p,'email_destinatari','WHERE MessaggioID=? ORDER BY ID',[$id]);}
@@ -61,7 +61,7 @@ $pageTitle=$tab==='esiti'?'Verifica esiti':'Gestione mail';$pageDescription=$tab
 page_start($pageTitle,$pageDescription,['Servizi','Gestione mail',$pageTitle],$headingExtra);
 ?>
 <link rel="stylesheet" href="/assets/email.css?v=<?=em_h($assetVersion('/assets/email.css'))?>">
-<?php if($message):?><aside role="status"><?=em_h($message)?></aside><?php endif;if(isset($_GET['salvato'])):?><aside role="status">Salvataggio completato.</aside><?php endif;?>
+<?php if($message):?><aside class="email-toast" role="status"><?=em_h($message)?></aside><?php endif;if(isset($_GET['salvato'])):?><aside class="email-toast" role="status">Salvataggio completato.</aside><?php endif;?>
 <?php if($config):?><?php if($config['Modalita']!=='produzione'):?><aside>Salvare una nuova configurazione prima di preparare nuove campagne.</aside><?php endif;else:?><aside>Configurazione mancante: un amministratore deve collegare il ponte Google.</aside><?php endif;?>
 <?php if($tab==='componi'):?>
 <?php require __DIR__.'/includes/email_compose.php';?>
