@@ -35,6 +35,7 @@ function layout_start(string $title, string $description='', array $context=[], 
   $mail=[];
   if(allowed($user,'gestione_email'))$mail[]=['label'=>'Invio mail','url'=>'/invio_email.php'];
   if(in_array($user['Ruolo'],['admin','ghost'],true))$mail[]=['label'=>'Configurazione mail','url'=>'/configurazione_mail.php'];
+  if(allowed($user,'confronto_contacts'))$mail[]=['label'=>'Confronto contacts','url'=>'/report_contacts.php'];
   if($mail)$services[]=['label'=>'Gestione mail','children'=>$mail];
   if(in_array($user['Ruolo'],['admin','ghost'],true))$services[]=['label'=>'Cifratura dati','url'=>'/cifratura_dati.php'];
   if($user['Ruolo']!=='ghost')$services[]=['label'=>'Cambia password','url'=>'/cambia_password.php'];
