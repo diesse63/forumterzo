@@ -30,7 +30,7 @@ if($selected){echo '<input type="hidden" id="email-archive-prepared" value="'.($
  $config=$prepared?em_config($p,(int)$selected['ConfigID']):null;
  $canPrepare=$write&&!$prepared;
  $canSend=$write&&$prepared&&(int)$selected['Inviate']<(int)$selected['Destinatari']&&$config&&em_campaign_sendable($p,(int)$selected['ID'],$config);
- $canResults=$selected['StatoEtichetta']==='Inviata'&&!empty($selected['ConfermaLettura']);
+$canResults=in_array($selected['StatoEtichetta'],['Inviata','Parzialmente inviata'],true)&&!empty($selected['ConfermaLettura']);
  $nextAction=['Bozza'=>'Prepara','Elaborata'=>'Invia','Parzialmente inviata'=>'Invia','Da verificare'=>'Verifica esiti'][$selected['StatoEtichetta']]??null;
 ?>
 <section class="email-card email-archive-detail">

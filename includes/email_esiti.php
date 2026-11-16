@@ -1,6 +1,6 @@
 <?php
 $campaign=null;foreach($campaigns as $candidate)if((int)$candidate['ID']===$id){$campaign=$candidate;break;}
-if(!$campaign||$campaign['StatoEtichetta']!=='Inviata'||empty($campaign['ConfermaLettura'])){echo '<aside>Gli esiti sono disponibili solo per una lista inviata con conferma ricezione attiva.</aside><p><a class="email-view-message" href="/invio_email.php?tab=registro">Torna al Registro mail</a></p></main></body></html>';return;}
+if(!$campaign||!in_array($campaign['StatoEtichetta'],['Inviata','Parzialmente inviata'],true)||empty($campaign['ConfermaLettura'])){echo '<aside>Gli esiti sono disponibili per liste inviate o parzialmente inviate con conferma ricezione attiva.</aside><p><a class="email-view-message" href="/invio_email.php?tab=registro">Torna al Registro mail</a></p></main></body></html>';return;}
 $esitiQ=trim((string)($_GET['esiti_q']??''));$esitiStato=trim((string)($_GET['esiti_stato']??''));$filteredLogs=array_values(array_filter($logs,fn($r)=>($esitiQ===''||dc_contains($r['Nome'].' '.$r['Email'].' '.$r['EmailEffettiva'].' '.$r['Oggetto'],$esitiQ))&&($esitiStato===''||$r['Stato']===$esitiStato)));
 ?>
 <section class="email-card email-results-panel"><h2>#<?=(int)$campaign['ID']?> · <?=em_h($campaign['Oggetto']!==''?$campaign['Oggetto']:'(Senza oggetto)')?></h2><p class="email-archive-date"><?=em_h($campaign['UltimoInvio']??$campaign['CreatoIl']??'Data non disponibile')?> · Conferma ricezione: <strong>Attiva</strong></p>
