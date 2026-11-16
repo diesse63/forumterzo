@@ -286,6 +286,19 @@ function em_duplicate(PDO $p,int $id,bool $withRecipients,?string $subject=null)
   $p->commit();return $new;
  }catch(Throwable $e){if($p->inTransaction())$p->rollBack();throw $e;}
 }
+function em_duplicate_reminder(PDO $p,int $id):int {
+ $p->beginTransaction();
+ try{
+  $source=dc_find($p,'email_messaggi',['ID'=>$id],true);if(!$source)throw new RuntimeException('Mail non trovata.');
+  $sent=dc_rows($p,'email_invii','WHERE MessaggioID=? AND Stato=\'inviato\' AND ConfermatoIl IS NULL',[$id]);$wanted=array_fill_keys(array_map(static fn($r)=>(int)$r['DestinatarioID'],$sent),true);
+  $dest=array_values(array_filter(dc_rows($p,'email_destinatari','WHERE MessaggioID=?',[$id]),static fn($r)=>isset($wanted[(int)$r['ID']])));
+  if(!$dest)throw new RuntimeException('Non ci sono destinatari inviati senza conferma ricezione.');
+  $resolved=em_resolve_recipients($p,array_filter(array_column($dest,'MailOrigineID')),false);$subject=trim((string)$source['Oggetto']).' - sollecito';
+  $new=(int)dc_insert($p,'email_messaggi',['Oggetto'=>$subject,'HTML'=>em_sanitize($source['HTML']),'Testo'=>$source['Testo'],'ConfermaLettura'=>1]);
+  foreach($resolved as $email=>$c)dc_insert($p,'email_destinatari',['MessaggioID'=>$new,'MailOrigineID'=>$c['ID'],'Nome'=>$c['Nome'],'Email'=>$email,'Tipo'=>$c['TipoSoggetto'],'Ente'=>$c['Ente']]);
+  $p->commit();return $new;
+ }catch(Throwable $e){if($p->inTransaction())$p->rollBack();throw $e;}
+}
 function em_delete(PDO $p,int $id,int $version):void {
  $q=$p->prepare('SELECT GET_LOCK(?,0)');$lock='email_send_'.$id;$q->execute([$lock]);if((int)$q->fetchColumn()!==1)throw new RuntimeException('Invio in corso: attendere il termine prima di eliminare.');
  try{

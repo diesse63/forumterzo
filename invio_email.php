@@ -28,6 +28,8 @@ try{
    $id=em_save_draft($p,$input);header('Location: /invio_email.php?tab=registro&id='.$id.'&salvato=1');exit;
   }elseif($action==='duplicate'){
    $source=dc_find($p,'email_messaggi',['ID'=>$id]);$subject=(string)($source['Oggetto']??'(Senza oggetto)');$duplicateSubject=trim((string)($_POST['duplicate_subject']??$subject));if($duplicateSubject!==''&&(strlen($duplicateSubject)>250||preg_match('/[\r\n]/',$duplicateSubject)))throw new RuntimeException('Nome della lista non valido: massimo 250 caratteri e nessun ritorno a capo.');$id=em_duplicate($p,$id,isset($_POST['copy_recipients'])&&$_POST['copy_recipients']==='1',$duplicateSubject);$message='Lista “'.$duplicateSubject.'” duplicata come nuova bozza.';$tab='registro';
+  }elseif($action==='reminder'){
+   $newId=em_duplicate_reminder($p,$id);$message='Lista di sollecito creata come nuova bozza.';$id=$newId;$tab='registro';
   }elseif($action==='delete'){
    if(!isset($_POST['confirm']))throw new RuntimeException('Confermare l’eliminazione della mail e del relativo registro.');
    $source=dc_find($p,'email_messaggi',['ID'=>$id]);$subject=(string)($source['Oggetto']??'(Senza oggetto)');em_delete($p,$id,(int)($_POST['version']??0));$id=0;$tab='registro';$message='Lista “'.$subject.'” eliminata dal gestionale. Le email già spedite non sono state ritirate.';
