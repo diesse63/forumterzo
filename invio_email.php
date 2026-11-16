@@ -10,6 +10,7 @@ if(($_GET['tab']??'')==='config'||($_SERVER['REQUEST_METHOD']==='POST'&&in_array
  header('Location: /configurazione_mail.php',true,$_SERVER['REQUEST_METHOD']==='POST'?307:302);exit;
 }
 $tab=(string)($_GET['tab']??'registro');if(!in_array($tab,['componi','registro','esiti'],true))$tab='registro';
+if($tab==='registro'&&isset($_GET['esiti']))$tab='esiti';
 $message=$_SESSION['email_flash']??'';unset($_SESSION['email_flash']);$id=(int)($_POST['id']??$_GET['id']??0);$p=poimanager_db();
 try{dc_active($p);}catch(RuntimeException $maintenance){page_start('Gestione mail','Servizio temporaneamente in manutenzione.',['Servizi','Gestione mail','Gestione mail']);echo '<aside>'.em_h($maintenance->getMessage()).'</aside></main></body></html>';exit;}
 if(!em_ready($p)){
