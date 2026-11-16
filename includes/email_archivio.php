@@ -30,10 +30,10 @@ $visible=array_slice($archive,($page-1)*20,20);
  $canPrepare=$write&&!$prepared;
  $canSend=$write&&$prepared&&(int)$selected['Inviate']<(int)$selected['Destinatari']&&$config&&em_campaign_sendable($p,(int)$selected['ID'],$config);
  $canResults=$selected['StatoEtichetta']==='Inviata'&&!empty($selected['ConfermaLettura']);
- $nextStatus=['Bozza'=>'Elaborata','Elaborata'=>'Parzialmente inviata','Parzialmente inviata'=>'Inviata','Da verificare'=>'Inviata'][$selected['StatoEtichetta']]??null;
+ $nextAction=['Bozza'=>'Prepara','Elaborata'=>'Invia','Parzialmente inviata'=>'Invia','Da verificare'=>'Verifica esiti'][$selected['StatoEtichetta']]??null;
 ?>
 <section class="email-card email-archive-detail">
-<h2>#<?=(int)$selected['ID']?> · <?=em_h($selected['Oggetto']!==''?$selected['Oggetto']:'(Senza oggetto)')?> <small class="email-card-status">Stato: <?=em_h($selected['StatoEtichetta'])?><?php if($nextStatus):?> · prossimo passaggio <?=em_h($nextStatus)?><?php endif;?></small></h2>
+<h2>#<?=(int)$selected['ID']?> · <?=em_h($selected['Oggetto']!==''?$selected['Oggetto']:'(Senza oggetto)')?> <small class="email-card-status">Stato: <?=em_h($selected['StatoEtichetta'])?><?php if($nextAction):?> · prossima azione <?=em_h($nextAction)?><?php endif;?></small></h2>
 <p class="email-archive-date"><?=em_h($selected['UltimoInvio']??$selected['CreatoIl']??'Data non disponibile')?></p>
 <p><strong><?=em_h($selected['StatoEtichetta'])?></strong> · Destinatari <?=(int)$selected['Destinatari']?> · Inviate <?=(int)$selected['Inviate']?> · Da verificare <?=(int)$selected['Incerte']?> · Conferma ricezione: <strong><?=!empty($selected['ConfermaLettura'])?'Attiva':'Non attiva'?></strong></p>
 <div class="email-archive-actions">
