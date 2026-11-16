@@ -143,7 +143,8 @@ function em_campaign_sendable(PDO $p,int $id,array $config):bool {
  $q=$p->prepare("SELECT COUNT(*) FROM email_destinatari WHERE MessaggioID=? AND (MailOrigineID IS NULL OR Tipo NOT IN ('ASSOCIAZIONE','REFERENTE','ALTRO'))");$q->execute([$id]);return (int)$q->fetchColumn()===0;
 }
 function em_prepare(PDO $p,int $id): int {
- $config=em_config($p);if(!$config||!$config['VerificataIl'])throw new RuntimeException('Salvare la configurazione e completare la verifica connessione.');
+ $config=em_config($p);if(!$config)throw new RuntimeException('Salvare prima la configurazione mail.');
+ if(!$config['VerificataIl']){$ping=em_ping($p,$config);$config=em_config($p,(int)$config['ID'])??$config;}
  em_require_production($config);
  $p->beginTransaction();
  try{
