@@ -5,7 +5,7 @@ $user=require_access('contacts_sync','lettura');
 require_once __DIR__.'/includes/google_contacts_bridge.php';
 require_once __DIR__.'/includes/dati.php';
 function gcs_norm_email(string $v):string{return strtolower(trim($v));}
-function gcs_labels(mixed $value):array{$out=[];foreach(is_array($value)?$value:[] as $item){$label=is_string($item)?trim($item):is_array($item)?trim((string)($item['displayName']??$item['name']??$item['label']??$item['value']??'')):'';if($label!=='')$out[]=$label;}return array_values(array_unique($out));}
+function gcs_labels(mixed $value):array{$out=[];foreach(is_array($value)?$value:[] as $item){$label='';if(is_string($item))$label=trim($item);elseif(is_array($item))$label=trim((string)($item['displayName']??$item['name']??$item['label']??$item['value']??''));if($label!=='')$out[]=$label;}return array_values(array_unique($out));}
 function gcs_db_entities(PDO $p):array{$out=[];foreach(dc_iter($p,'Associazioni') as $a)$out[(int)$a['ID']]=(string)$a['SOGGETTO'];return $out;}
 function gcs_snapshot(PDO $p,array $config):array{
  $entities=gcs_db_entities($p);$db=[];
