@@ -10,6 +10,8 @@
  const autoScroll=document.getElementById('email-archive-auto-scroll');if(autoScroll){const go=()=>document.getElementById(autoScroll.dataset.scrollTo)?.scrollIntoView({block:'center',behavior:'auto'});if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>requestAnimationFrame(go),{once:true});else requestAnimationFrame(go);setTimeout(go,250);}
  const archiveDetailCard=document.querySelector('[data-archive-detail]');
  if(archiveDetailCard){
+  const selectedArchiveRow=document.querySelector('[data-archive-row].is-selected');
+  if(selectedArchiveRow)selectedArchiveRow.insertAdjacentElement('afterend',archiveDetailCard);
   const closeArchiveDetail=()=>archiveDetailCard.classList.add('is-collapsed');
   document.querySelectorAll('[data-archive-row]').forEach(row=>row.addEventListener('click',event=>{
    if(row.classList.contains('is-selected')&&!archiveDetailCard.classList.contains('is-collapsed')){event.preventDefault();closeArchiveDetail();}
