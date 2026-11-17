@@ -196,7 +196,7 @@ function em_send_batch(PDO $p,int $id,?callable $bridge=null): array {
   $ping=$bridge($config,$secret,['op'=>'ping']);if(empty($ping['ok'])||strtolower($ping['sender']??'')!==strtolower($config['Mittente']))throw new RuntimeException('Il mittente del ponte non corrisponde alla campagna.');
   $limit=min((int)$config['Lotto'],max(0,(int)($ping['quota']??0)));
   if(!$limit)throw new RuntimeException('Quota Gmail esaurita nelle ultime 24 ore. L’invio è bloccato fino al ripristino della quota.');
-  $jobs=dc_rows($p,'email_invii',"WHERE MessaggioID=? AND Stato='da_inviare' ORDER BY DestinatarioID LIMIT ".$limit,[$id]);
+  $pendingQ=$p->prepare("SELECT COUNT(*) FROM email_invii WHERE MessaggioID=? AND Stato='da_inviare'");$pendingQ->execute([$id]);$pending=(int)$pendingQ->fetchColumn();$jobs=dc_rows($p,'email_invii',"WHERE MessaggioID=? AND Stato='da_inviare' ORDER BY DestinatarioID LIMIT ".$limit,[$id]);if($pending>$limit)$notice='Quota Gmail insufficiente: inviati solo '.$limit.' destinatari disponibili; '.($pending-$limit).' restano sospesi e saranno inviabili dopo il ripristino della quota.';
   foreach($jobs as $row){
    dc_active($p);
    $dest=dc_find($p,'email_destinatari',['ID'=>$row['DestinatarioID']]);$plainMessage=dc_find($p,'email_messaggi',['ID'=>$id]);$aq=$p->prepare('SELECT NomeFile,Mime,Dimensione,Contenuto FROM email_allegati WHERE MessaggioID=? LIMIT 1');$aq->execute([$id]);$attachment=$aq->fetch(PDO::FETCH_ASSOC);if($attachment)$attachment=['filename'=>$attachment['NomeFile'],'mimeType'=>$attachment['Mime'],'content'=>base64_encode($attachment['Contenuto'])];
