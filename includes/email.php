@@ -316,7 +316,7 @@ function em_duplicate(PDO $p,int $id,bool $withRecipients,?string $subject=null)
   $source=dc_find($p,'email_messaggi',['ID'=>$id],true);if(!$source)throw new RuntimeException('Mail non trovata.');
   $dest=$withRecipients?dc_rows($p,'email_destinatari','WHERE MessaggioID=?',[$id]):[];
   $resolved=em_resolve_recipients($p,array_filter(array_column($dest,'MailOrigineID')),false);
-  $new=(int)dc_insert($p,'email_messaggi',['Oggetto'=>$subject??$source['Oggetto'],'HTML'=>em_sanitize($source['HTML']),'Testo'=>$source['Testo'],'ConfermaLettura'=>(int)($source['ConfermaLettura']??1)]);
+  $new=(int)dc_insert($p,'email_messaggi',['Oggetto'=>$subject??$source['Oggetto'],'HTML'=>em_sanitize($source['HTML']),'Testo'=>$source['Testo'],'ConfermaLettura'=>(int)($source['ConfermaLettura']??1)]);$q=$p->prepare('INSERT INTO email_allegati (MessaggioID,NomeFile,Mime,Dimensione,Contenuto) SELECT ?,NomeFile,Mime,Dimensione,Contenuto FROM email_allegati WHERE MessaggioID=?');$q->execute([$new,$id]);
   foreach($resolved as $email=>$c)dc_insert($p,'email_destinatari',['MessaggioID'=>$new,'MailOrigineID'=>$c['ID'],'Nome'=>$c['Nome'],'Email'=>$email,'Tipo'=>$c['TipoSoggetto'],'Ente'=>$c['Ente']]);
   $p->commit();return $new;
  }catch(Throwable $e){if($p->inTransaction())$p->rollBack();throw $e;}
@@ -329,7 +329,7 @@ function em_duplicate_reminder(PDO $p,int $id):int {
   $dest=array_values(array_filter(dc_rows($p,'email_destinatari','WHERE MessaggioID=?',[$id]),static fn($r)=>isset($wanted[(int)$r['ID']])));
   if(!$dest)throw new RuntimeException('Non ci sono destinatari inviati senza conferma ricezione.');
   $resolved=em_resolve_recipients($p,array_filter(array_column($dest,'MailOrigineID')),false);$subject=trim((string)$source['Oggetto']).' - sollecito';
-  $new=(int)dc_insert($p,'email_messaggi',['Oggetto'=>$subject,'HTML'=>em_sanitize($source['HTML']),'Testo'=>$source['Testo'],'ConfermaLettura'=>1]);
+  $new=(int)dc_insert($p,'email_messaggi',['Oggetto'=>$subject,'HTML'=>em_sanitize($source['HTML']),'Testo'=>$source['Testo'],'ConfermaLettura'=>1]);$q=$p->prepare('INSERT INTO email_allegati (MessaggioID,NomeFile,Mime,Dimensione,Contenuto) SELECT ?,NomeFile,Mime,Dimensione,Contenuto FROM email_allegati WHERE MessaggioID=?');$q->execute([$new,$id]);
   foreach($resolved as $email=>$c)dc_insert($p,'email_destinatari',['MessaggioID'=>$new,'MailOrigineID'=>$c['ID'],'Nome'=>$c['Nome'],'Email'=>$email,'Tipo'=>$c['TipoSoggetto'],'Ente'=>$c['Ente']]);
   $p->commit();return $new;
  }catch(Throwable $e){if($p->inTransaction())$p->rollBack();throw $e;}
