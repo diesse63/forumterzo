@@ -32,7 +32,6 @@ function gcs_apply(PDO $p,array $config,array $snapshot,array $choices):array{
     $editable=['name','title','department','symbol','domain','location','jobDescription','phoneticName','type'];$clean=[];foreach($orgs as $o){$x=[];foreach($editable as $field)if(array_key_exists($field,$o))$x[$field]=$o[$field];$clean[]=$x;}
     gcs_call($config,['op'=>'update','resourceName'=>$g['resourceName'],'etag'=>$g['etag'],'organizations'=>$clean]);$results[]='Google aggiornato: '.$email;
    }else{
-    if(trim($g['title'])==='')throw new RuntimeException('Organization Title vuoto per '.$email.': non è possibile sostituire il nome dell’associazione.');
     $freshGoogle=$live[$email]??[];if(count($freshGoogle)!==1||($freshGoogle[0]['resourceName']??'')!==$g['resourceName']||($freshGoogle[0]['etag']??'')!==$g['etag'])throw new RuntimeException('Contatto Google modificato o duplicato dopo l’anteprima: '.$email);
     $p->beginTransaction();try{$entity=dc_find($p,'Associazioni',['ID'=>$d['entity_id']],true);$mail=dc_find($p,'Mail',['ID'=>$d['mail_id']]);if(!$entity||$entity['SOGGETTO']!==$d['label']||!$mail||$mail['TipoSoggetto']!=='ASSOCIAZIONE'||(int)$mail['IDSoggetto']!==$d['entity_id']||gcs_norm_email((string)$mail['Indirizzo'])!==$email)throw new RuntimeException('Associazione o email modificata dopo l’anteprima: '.$email);dc_update($p,'Associazioni',['ID'=>$d['entity_id']],['SOGGETTO'=>$g['title']]);$p->commit();$results[]='Database aggiornato: '.$email;}catch(Throwable $e){if($p->inTransaction())$p->rollBack();throw $e;}
    }
