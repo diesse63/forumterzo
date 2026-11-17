@@ -195,7 +195,7 @@ function em_send_batch(PDO $p,int $id,?callable $bridge=null): array {
   em_require_production($config);$secret=em_secret($config);
   $ping=$bridge($config,$secret,['op'=>'ping']);if(empty($ping['ok'])||strtolower($ping['sender']??'')!==strtolower($config['Mittente']))throw new RuntimeException('Il mittente del ponte non corrisponde alla campagna.');
   $limit=min((int)$config['Lotto'],max(0,(int)($ping['quota']??0)));
-  if(!$limit)return ['sent'=>0,'notice'=>'Quota Gmail esaurita. Riprendere più tardi.'];
+  if(!$limit)throw new RuntimeException('Quota Gmail esaurita nelle ultime 24 ore. L’invio è bloccato fino al ripristino della quota.');
   $jobs=dc_rows($p,'email_invii',"WHERE MessaggioID=? AND Stato='da_inviare' ORDER BY DestinatarioID LIMIT ".$limit,[$id]);
   foreach($jobs as $row){
    dc_active($p);

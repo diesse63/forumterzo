@@ -29,7 +29,7 @@ if($selected){echo '<input type="hidden" id="email-archive-prepared" value="'.($
  $prepared=$selected['Stato']==='preparato';
  $config=$prepared?em_config($p,(int)$selected['ConfigID']):null;
  $canPrepare=$write&&!$prepared;
- $remaining=max(0,(int)$selected['Destinatari']-(int)$selected['Inviate']);$total=(int)$selected['Destinatari'];$canSend=$write&&$prepared&&$remaining>0&&$config&&em_campaign_sendable($p,(int)$selected['ID'],$config);
+ $remaining=max(0,(int)$selected['Destinatari']-(int)$selected['Inviate']);$total=(int)$selected['Destinatari'];$canSend=$write&&$prepared&&$remaining>0&&$config&&$quota24h!==null&&$quota24h>0&&em_campaign_sendable($p,(int)$selected['ID'],$config);
 $canResults=in_array($selected['StatoEtichetta'],['Inviata','Parzialmente inviata'],true)&&!empty($selected['ConfermaLettura']);
  $nextAction=['Bozza'=>'Prepara','Elaborata'=>'Invia','Parzialmente inviata'=>'Invia','Da verificare'=>'Recupera esiti dal ponte'][$selected['StatoEtichetta']]??null;
 ?>
