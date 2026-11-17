@@ -47,7 +47,7 @@ try{
 }catch(Throwable $e){
  $message=($action??'')==='reminder'?'Errore sollecito: '.$e->getMessage():($e instanceof PDOException?'Operazione email non completata. Verificare le tabelle dedicate e riprovare senza duplicare invii con esito incerto.':$e->getMessage());
 }
-$config=em_config($p);$draft=null;$dest=[];$logs=[];$campaigns=em_campaigns($p);
+$config=em_config($p);$quota24h=null;$quotaError='';if($config){try{$quota24h=(int)(em_ping($p,$config)['quota']??0);}catch(Throwable $e){$quotaError='Quota non disponibile: '.$e->getMessage();}}$draft=null;$dest=[];$logs=[];$campaigns=em_campaigns($p);
 if($id){$draft=dc_find($p,'email_messaggi',['ID'=>$id]);$dest=dc_rows($p,'email_destinatari','WHERE MessaggioID=? ORDER BY ID',[$id]);$aq=$p->prepare('SELECT NomeFile,Dimensione FROM email_allegati WHERE MessaggioID=? LIMIT 1');$aq->execute([$id]);$attachment=$aq->fetch(PDO::FETCH_ASSOC)?:null;}else{$attachment=null;}
 $frozen=$draft&&$draft['Stato']==='preparato';$editable=$write;
 $contacts=$tab==='componi'?em_address_book($p):[];$selected=array_map('intval',array_column($dest,'MailOrigineID'));
@@ -63,6 +63,7 @@ page_start($pageTitle,$pageDescription,['Servizi','Gestione mail',$pageTitle],$h
 <link rel="stylesheet" href="/assets/email.css?v=<?=em_h($assetVersion('/assets/email.css'))?>">
 <?php if($message):?><aside class="email-toast" role="status"><?=em_h($message)?></aside><?php endif;if(isset($_GET['salvato'])):?><aside class="email-toast" role="status">Salvataggio completato.</aside><?php endif;?>
 <?php if($config):?><?php if($config['Modalita']!=='produzione'):?><aside>Salvare una nuova configurazione prima di preparare nuove campagne.</aside><?php endif;else:?><aside>Configurazione mancante: un amministratore deve collegare il ponte Google.</aside><?php endif;?>
+<?php if($quota24h!==null):?><aside class="email-quota" role="status"><strong>Quota Gmail residua nelle ultime 24 ore:</strong> <?=number_format($quota24h,0,',','.')?> messaggi</aside><?php elseif($quotaError!==''):?><aside class="email-quota email-quota-error" role="status"><?=em_h($quotaError)?></aside><?php endif;?>
 <?php if($tab==='componi'):?>
 <?php require __DIR__.'/includes/email_compose.php';?>
 <?php elseif($tab==='esiti'):?>

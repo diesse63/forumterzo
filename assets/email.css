@@ -29,3 +29,4 @@
 .email-toast{position:fixed;right:22px;bottom:22px;z-index:20;margin:0;max-width:min(520px,calc(100% - 44px));box-shadow:0 5px 18px #16344a33}
 .email-archive-detail>.email-archive-actions .email-results-button{display:block;width:100%;margin:0;padding:10px 8px}
 .email-archive-detail>.email-archive-actions .email-results-button{width:auto;flex:0 0 auto!important}
+.email-quota{background:#e8f5ed;border:1px solid #a8d2b8;border-left:4px solid #2e7d4f;border-radius:7px;padding:11px 14px;margin:14px 0;color:#205d3a}.email-quota-error{background:#fff4e5;border-color:#e5c18b;border-left-color:#b26a00;color:#754500}
