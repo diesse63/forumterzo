@@ -24,7 +24,7 @@ try{
   require_access('gestione_email','scrittura');check_csrf();$action=(string)($_POST['action']??'');
   if($action==='send')em_consume_send_nonce((string)($_POST['send_nonce']??''));
   if($action==='save'){
-   $input=$_POST;if(!isset($_POST['rich']))$input['html']='<p>'.nl2br(em_h((string)($_POST['text']??''))).'</p>';
+   $input=$_POST;$input['attachment']=$_FILES['attachment']??null;if(!isset($_POST['rich']))$input['html']='<p>'.nl2br(em_h((string)($_POST['text']??''))).'</p>';
    $id=em_save_draft($p,$input);header('Location: /invio_email.php?tab=registro&id='.$id.'&salvato=1');exit;
   }elseif($action==='duplicate'){
    $source=dc_find($p,'email_messaggi',['ID'=>$id]);$subject=(string)($source['Oggetto']??'(Senza oggetto)');$duplicateSubject=trim((string)($_POST['duplicate_subject']??$subject));if($duplicateSubject!==''&&(strlen($duplicateSubject)>250||preg_match('/[\r\n]/',$duplicateSubject)))throw new RuntimeException('Nome della lista non valido: massimo 250 caratteri e nessun ritorno a capo.');$id=em_duplicate($p,$id,isset($_POST['copy_recipients'])&&$_POST['copy_recipients']==='1',$duplicateSubject);$message='Lista “'.$duplicateSubject.'” duplicata come nuova bozza.';$tab='registro';
@@ -48,7 +48,7 @@ try{
  $message=($action??'')==='reminder'?'Errore sollecito: '.$e->getMessage():($e instanceof PDOException?'Operazione email non completata. Verificare le tabelle dedicate e riprovare senza duplicare invii con esito incerto.':$e->getMessage());
 }
 $config=em_config($p);$draft=null;$dest=[];$logs=[];$campaigns=em_campaigns($p);
-if($id){$draft=dc_find($p,'email_messaggi',['ID'=>$id]);$dest=dc_rows($p,'email_destinatari','WHERE MessaggioID=? ORDER BY ID',[$id]);}
+if($id){$draft=dc_find($p,'email_messaggi',['ID'=>$id]);$dest=dc_rows($p,'email_destinatari','WHERE MessaggioID=? ORDER BY ID',[$id]);$aq=$p->prepare('SELECT NomeFile,Dimensione FROM email_allegati WHERE MessaggioID=? LIMIT 1');$aq->execute([$id]);$attachment=$aq->fetch(PDO::FETCH_ASSOC)?:null;}else{$attachment=null;}
 $frozen=$draft&&$draft['Stato']==='preparato';$editable=$write;
 $contacts=$tab==='componi'?em_address_book($p):[];$selected=array_map('intval',array_column($dest,'MailOrigineID'));
 $tipi=$tab==='componi'?dc_rows($p,'Tipologia'):[];usort($tipi,fn($a,$b)=>strnatcasecmp($a['Tipologia'],$b['Tipologia']));

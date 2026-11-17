@@ -25,7 +25,7 @@ function doPost(e) {
  var props=PropertiesService.getScriptProperties(),secret=props.getProperty('BRIDGE_SECRET')||'',nonce='',sender='';
  if(!/^[a-f0-9]{64}$/.test(secret))return ContentService.createTextOutput('Ponte non configurato.');
  try {
-  if(!e||!e.postData||e.postData.contents.length>250000)throw new Error('Richiesta non valida.');
+  if(!e||!e.postData||e.postData.contents.length>8000000)throw new Error('Richiesta non valida.');
   var env=JSON.parse(e.postData.contents);
   if(typeof env.data!=='string'||!bridgeEqual_(bridgeSign_(env.data,secret),env.signature))throw new Error('Firma non valida.');
   var p=JSON.parse(Utilities.newBlob(Utilities.base64Decode(env.data)).getDataAsString('UTF-8'));
@@ -45,7 +45,8 @@ function doPost(e) {
    if(p.op==='status'){result.status=job?job.status:'unknown';return bridgeOutput_(result,secret);}
    if(p.op!=='send')throw new Error('Operazione non consentita.');
    if(!/^[^\s@,;<>]+@[^\s@,;<>]+\.[^\s@,;<>]+$/.test(String(p.to||''))||String(p.subject||'').length>300||/[\r\n]/.test(String(p.subject||''))||!String(p.text||'').trim()||String(p.html||'').length>150000)throw new Error('Contenuto email non valido.');
-   var hash=bridgeHex_(Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256,JSON.stringify([p.to,p.subject,p.text,p.html,p.name]),Utilities.Charset.UTF_8));
+   var attachments=[];if(Array.isArray(p.attachments)){if(p.attachments.length>1)throw new Error('Un solo allegato consentito.');p.attachments.forEach(function(a){if(!a||String(a.filename||'').length>180||String(a.content||'').length>7000000)throw new Error('Allegato non valido.');attachments.push(Utilities.newBlob(Utilities.base64Decode(String(a.content||'')),String(a.mimeType||'application/octet-stream'),String(a.filename||'allegato')));});}
+   var hash=bridgeHex_(Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256,JSON.stringify([p.to,p.subject,p.text,p.html,p.name,p.attachments||[]]),Utilities.Charset.UTF_8));
    if(job){
     if(job.hash!==hash)throw new Error('Identificativo riutilizzato con contenuto diverso.');
     // Solo un mancato invio certo permette un nuovo tentativo con lo stesso contenuto.
@@ -58,7 +59,7 @@ function doPost(e) {
    // La marcatura precedente all'invio impedisce reinvii dopo timeout o errori.
    props.setProperty(key,JSON.stringify({status:'uncertain',hash:hash,date:new Date().toISOString()}));
    try {
-    MailApp.sendEmail({to:String(p.to),subject:String(p.subject),body:String(p.text),htmlBody:String(p.html),name:String(p.name||'Gestione')});
+    MailApp.sendEmail({to:String(p.to),subject:String(p.subject),body:String(p.text),htmlBody:String(p.html),name:String(p.name||'Gestione'),attachments:attachments});
     props.setProperty(key,JSON.stringify({status:'sent',hash:hash,date:new Date().toISOString()}));
     result.status='sent';result.quota=MailApp.getRemainingDailyQuota();
    } catch(error) { result.status='uncertain'; }

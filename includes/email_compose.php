@@ -5,7 +5,7 @@ else{foreach($contacts as $c)if(isset($wanted[(int)$c['ID']]))$initial[$c['Indir
 ?>
 <?php if(isset($_GET['duplicato'])):?><aside role="status">Copia creata come nuova bozza, senza invii o conferme. Gli eventuali destinatari sono stati riletti dalla rubrica attuale.</aside><?php endif;?>
 <?php if($frozen):?><aside>Mail già elaborata: modificando e salvando contenuto o destinatari la campagna tornerà in stato Bozza. Le email già inviate non possono essere modificate.</aside><?php endif;?>
-<form method="post" id="email-compose" data-editable="<?=$editable?'1':'0'?>" data-frozen="<?=$frozen?'1':'0'?>">
+<form method="post" enctype="multipart/form-data" id="email-compose" data-editable="<?=$editable?'1':'0'?>" data-frozen="<?=$frozen?'1':'0'?>">
 <input type="hidden" name="csrf" value="<?=em_h(csrf())?>"><input type="hidden" name="action" value="save"><input type="hidden" name="id" value="<?=$id?>"><input type="hidden" name="version" value="<?=(int)($draft['Versione']??0)?>">
 <section class="email-card email-message-card" id="email-message-card"><h2>Mail</h2>
 <p class="email-muted">Le bozze e le campagne elaborate non ancora inviate si possono modificare; le email già inviate restano in consultazione e possono essere duplicate dall’archivio.</p>
@@ -14,6 +14,8 @@ else{foreach($contacts as $c)if(isset($wanted[(int)$c['ID']]))$initial[$c['Indir
 <div id="email-editor" role="textbox" aria-label="Testo formattato" aria-multiline="true" hidden><?=$draft?em_sanitize($draft['HTML']):'<p>Buongiorno {nome},</p><p></p>'?></div>
 <label id="email-text-label">Testo<textarea name="text" id="email-text" rows="7" maxlength="30000" <?=$editable?'':'disabled'?>><?=em_h($draft['Testo']??'Buongiorno {nome},')?></textarea></label>
 <textarea name="html" id="email-html" hidden><?=em_h($draft['HTML']??'<p>Buongiorno {nome},</p>')?></textarea>
+<label>Allegato (PDF, Office, CSV, TXT, JPG o PNG; massimo 5 MB)<input type="file" name="attachment" accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.jpg,.jpeg,.png" <?=$editable?'':'disabled'?>></label>
+<?php if(!empty($attachment)):?><p class="email-muted">Allegato attuale: <strong><?=em_h($attachment['NomeFile'])?></strong> (<?=number_format((int)$attachment['Dimensione']/1048576,2,',','.')?> MB). Selezionando un nuovo file verrà sostituito.</p><?php endif;?>
 <p class="email-muted">{nome} viene sostituito con il nominativo selezionato.</p><div class="email-row"><label class="email-receipt-toggle"><input type="hidden" name="conferma_lettura" value="0"><input type="checkbox" name="conferma_lettura" value="1" <?=($draft===null||(int)($draft['ConfermaLettura']??1)===1)?'checked':''?> <?=$editable?'':'disabled'?>> Conferma ricezione</label><button type="button" id="email-preview">Anteprima</button><?php if($editable):?><button>Salva bozza e destinatari</button><?php endif;?><a class="email-view-message" href="/invio_email.php?tab=registro">Registro mail</a></div></section>
 <div class="email-recipients-grid">
 <section class="email-card" id="email-address-card"><h2>Anagrafica destinatari</h2>

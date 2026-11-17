@@ -5,8 +5,8 @@ require_once __DIR__.'/email_http.php';
 require_once __DIR__.'/dati.php';
 function em_h($value): string {return htmlspecialchars((string)$value,ENT_QUOTES|ENT_SUBSTITUTE,'UTF-8');}
 function em_ready(PDO $p): bool {
- $q=$p->query("SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME IN ('email_configurazione','email_messaggi','email_destinatari','email_invii')");
- if((int)$q->fetchColumn()!==4)return false;
+ $q=$p->query("SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME IN ('email_configurazione','email_messaggi','email_destinatari','email_allegati','email_invii')");
+ if((int)$q->fetchColumn()!==5)return false;
  $q=$p->prepare("SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='email_messaggi' AND COLUMN_NAME='ConfermaLettura'");$q->execute();
  return (int)$q->fetchColumn()===1;
 }
@@ -17,7 +17,7 @@ function em_install(PDO $p): void {
  // Gli aggiornamenti dello schema avvengono solo dalla procedura amministrativa esplicita.
  $q=$p->query("SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='email_messaggi' AND COLUMN_NAME='ConfermaLettura'");
  if(!(int)$q->fetchColumn())$p->exec("ALTER TABLE email_messaggi ADD COLUMN ConfermaLettura TINYINT NOT NULL DEFAULT 1 AFTER Stato");
- foreach(['email_configurazione'=>['ID','SegretoRef','VerificataIl'],'email_messaggi'=>['ID','Versione','ConfigID','ConfermaLettura'],'email_destinatari'=>['ID','MailOrigineID','MessaggioID'],'email_invii'=>['ID','CodiceHash','ScadeIl','EmailEffettiva']] as $table=>$required){
+ foreach(['email_configurazione'=>['ID','SegretoRef','VerificataIl'],'email_messaggi'=>['ID','Versione','ConfigID','ConfermaLettura'],'email_destinatari'=>['ID','MailOrigineID','MessaggioID'],'email_allegati'=>['ID','MessaggioID','NomeFile','Mime','Dimensione','Contenuto'],'email_invii'=>['ID','CodiceHash','ScadeIl','EmailEffettiva']] as $table=>$required){
   $q=$p->prepare('SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=?');$q->execute([$table]);
   if(array_diff($required,$q->fetchAll(PDO::FETCH_COLUMN)))throw new RuntimeException('Struttura delle nuove tabelle email non compatibile: '.$table);
  }
@@ -114,7 +114,8 @@ function em_save_draft(PDO $p,array $in): int {
  $subject=trim((string)($in['subject']??''));$text=trim((string)($in['text']??''));$html=em_sanitize((string)($in['html']??''));
  if(strlen($subject)>250||preg_match('/[\r\n]/',$subject)||strlen($text)>30000)throw new RuntimeException('Oggetto massimo 250 byte, senza ritorni a capo; testo massimo 30.000 byte.');
  if($subject===''||$text==='')throw new RuntimeException('Salvataggio non eseguito: inserire sia l’oggetto sia il testo della mail.');
- $selected=em_resolve_recipients($p,$in['mail_ids']??[]);
+ $selected=em_resolve_recipients($p,$in['mail_ids']??[]);$upload=$in['attachment']??null;$attachment=null;
+ if(is_array($upload)&&($upload['error']??UPLOAD_ERR_NO_FILE)!==UPLOAD_ERR_NO_FILE){if(($upload['error']??UPLOAD_ERR_OK)!==UPLOAD_ERR_OK||!is_uploaded_file((string)($upload['tmp_name']??'')))throw new RuntimeException('Caricamento allegato non riuscito.');$name=trim((string)($upload['name']??''));$size=(int)($upload['size']??0);$mime=(string)($upload['type']??'application/octet-stream');$ext=strtolower(pathinfo($name,PATHINFO_EXTENSION));$allowed=['pdf'=>'application/pdf','doc'=>'application/msword','docx'=>'application/vnd.openxmlformats-officedocument.wordprocessingml.document','xls'=>'application/vnd.ms-excel','xlsx'=>'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','csv'=>'text/csv','txt'=>'text/plain','jpg'=>'image/jpeg','jpeg'=>'image/jpeg','png'=>'image/png'];if($size<1||$size>5242880||!isset($allowed[$ext]))throw new RuntimeException('Allegato non valido: usare PDF, Office, CSV, TXT, JPG o PNG fino a 5 MB.');$data=file_get_contents((string)$upload['tmp_name']);if($data===false)throw new RuntimeException('Impossibile leggere l’allegato.');$attachment=['name'=>substr($name,0,180),'mime'=>$allowed[$ext],'size'=>$size,'data'=>$data];}
  $id=(int)($in['id']??0);$lock=$id?em_campaign_lock($p,$id):null;
  try{
   $p->beginTransaction();
@@ -125,6 +126,7 @@ function em_save_draft(PDO $p,array $in): int {
    dc_update($p,'email_messaggi',['ID'=>$id],['Oggetto'=>$subject,'HTML'=>$html,'Testo'=>$text,'Stato'=>'bozza','ConfigID'=>null,'ConfermaLettura'=>array_key_exists('conferma_lettura',$in)?(int)(bool)$in['conferma_lettura']:1,'Versione'=>(int)$old['Versione']+1]);
    $q=$p->prepare('DELETE FROM email_destinatari WHERE MessaggioID=?');$q->execute([$id]);
   }else{$id=(int)dc_insert($p,'email_messaggi',['Oggetto'=>$subject,'HTML'=>$html,'Testo'=>$text,'ConfermaLettura'=>array_key_exists('conferma_lettura',$in)?(int)(bool)$in['conferma_lettura']:1]);}
+  if($attachment){$q=$p->prepare('DELETE FROM email_allegati WHERE MessaggioID=?');$q->execute([$id]);$q=$p->prepare('INSERT INTO email_allegati (MessaggioID,NomeFile,Mime,Dimensione,Contenuto) VALUES (?,?,?,?,?)');$q->execute([$id,$attachment['name'],$attachment['mime'],$attachment['size'],$attachment['data']]);}
   foreach($selected as $email=>$c)dc_insert($p,'email_destinatari',['MessaggioID'=>$id,'MailOrigineID'=>$c['ID'],'Nome'=>$c['Nome'],'Email'=>$email,'Tipo'=>$c['TipoSoggetto'],'Ente'=>$c['Ente']]);
   $p->commit();return $id;
  }catch(Throwable $e){if($p->inTransaction())$p->rollBack();throw $e;}
@@ -181,7 +183,7 @@ function em_payload(array $row,array $config): array {
  $name=$row['Nome'];$withReceipt=(int)($row['ConfermaLettura']??1)===1;$link='https://poimanager.altervista.org/email_conferma.php?t='.em_token($row['ID']);
  $html=str_replace('{nome}',em_h($name),$row['HTML']);$text=str_replace('{nome}',$name,$row['Testo']);
  $subject=$row['Oggetto'];
- return ['op'=>'send','job'=>$row['ID'],'to'=>$row['EmailEffettiva'],'subject'=>$subject,'name'=>$config['NomeMittente'],'text'=>$withReceipt?$text."\n\nConferma la lettura: ".$link."\nLink personale: non inoltrarlo.":$text,'html'=>'<div style="font-family:Arial,sans-serif;font-size:16px;line-height:1.6">'.$html.($withReceipt?'<p><a href="'.em_h($link).'" style="display:inline-block;padding:14px 22px;background:#175cd3;color:#fff;text-decoration:none;border-radius:8px">Conferma la lettura</a></p><p>Link personale: non inoltrarlo.</p>':'').'</div>'];
+ $out=['op'=>'send','job'=>$row['ID'],'to'=>$row['EmailEffettiva'],'subject'=>$subject,'name'=>$config['NomeMittente'],'text'=>$withReceipt?$text."\n\nConferma la lettura: ".$link."\nLink personale: non inoltrarlo.":$text,'html'=>'<div style="font-family:Arial,sans-serif;font-size:16px;line-height:1.6">'.$html.($withReceipt?'<p><a href="'.em_h($link).'" style="display:inline-block;padding:14px 22px;background:#175cd3;color:#fff;text-decoration:none;border-radius:8px">Conferma la lettura</a></p><p>Link personale: non inoltrarlo.</p>':'').'</div>'];if(!empty($row['Allegato']))$out['attachments']=[$row['Allegato']];return $out;
 }
 function em_send_batch(PDO $p,int $id,?callable $bridge=null): array {
  $bridge??='em_bridge_call';$lock=em_campaign_lock($p,$id);
@@ -197,8 +199,8 @@ function em_send_batch(PDO $p,int $id,?callable $bridge=null): array {
   $jobs=dc_rows($p,'email_invii',"WHERE MessaggioID=? AND Stato='da_inviare' ORDER BY DestinatarioID LIMIT ".$limit,[$id]);
   foreach($jobs as $row){
    dc_active($p);
-   $dest=dc_find($p,'email_destinatari',['ID'=>$row['DestinatarioID']]);$plainMessage=dc_find($p,'email_messaggi',['ID'=>$id]);
-   $row=array_merge($plainMessage,$dest,$row);
+   $dest=dc_find($p,'email_destinatari',['ID'=>$row['DestinatarioID']]);$plainMessage=dc_find($p,'email_messaggi',['ID'=>$id]);$aq=$p->prepare('SELECT NomeFile,Mime,Dimensione,Contenuto FROM email_allegati WHERE MessaggioID=? LIMIT 1');$aq->execute([$id]);$attachment=$aq->fetch(PDO::FETCH_ASSOC);if($attachment)$attachment=['filename'=>$attachment['NomeFile'],'mimeType'=>$attachment['Mime'],'content'=>base64_encode($attachment['Contenuto'])];
+   $row=array_merge($plainMessage,$dest,$row,['Allegato'=>$attachment]);
    if(time()-$start>150){$notice='Tempo del lotto terminato: riprendere i rimanenti.';break;}
    $payload=em_payload($row,$config);
    $claim=$p->prepare("UPDATE email_invii SET Stato='in_corso',IniziatoIl=UTC_TIMESTAMP() WHERE ID=? AND Stato='da_inviare'");$claim->execute([$row['ID']]);if(!$claim->rowCount())continue;
