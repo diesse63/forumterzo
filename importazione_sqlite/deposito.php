@@ -5,18 +5,22 @@ require_once dirname(__DIR__).'/includes/protezione_http.php';
 function import_resolve_private_dir(string $path,string $base,string $documentRoot): array {
  $base=realpath($base);
  if(!$base)throw new RuntimeException('Cartella della procedura non verificabile.');
- if(in_array(str_replace('\\','/',trim($path)),['importazione_sqlite/data','./importazione_sqlite/data','data','./data'],true))$path=$base.'/data';
+ $normalize=static fn(string $value): string => rtrim(str_replace('\\','/', $value),'/');
+ $pathNormalized=$normalize($path);
+ if(in_array(trim(str_replace('\\','/', $path)),['importazione_sqlite/data','./importazione_sqlite/data','data','./data'],true))$path=$base.'/data';
  if(trim($path)==='')throw new RuntimeException('private_dir vuoto: configurare la cartella importazione_sqlite/data in private/config.php.');
  $standard=$base.'/data';
- if(is_link($standard)&&($path===$standard||realpath($path)===realpath($standard)))throw new RuntimeException('Il deposito data non può essere un collegamento simbolico.');
- if($path===$standard&&!file_exists($standard)){
+ $pathNormalized=$normalize($path);
+ $standardNormalized=$normalize($standard);
+ if(is_link($standard)&&($pathNormalized===$standardNormalized||realpath($path)===realpath($standard)))throw new RuntimeException('Il deposito data non può essere un collegamento simbolico.');
+ if($pathNormalized===$standardNormalized&&!file_exists($standard)){
   if(!@mkdir($standard,0755)&&!is_dir($standard))throw new RuntimeException('Cartella importazione_sqlite/data assente e creazione automatica fallita. Crearla con WinSCP.');
  }
  $dir=realpath($path);
  if(!$dir)throw new RuntimeException('Percorso private_dir inesistente. In private/config.php usare: dirname(__DIR__) . "/importazione_sqlite/data".');
  if(!is_dir($dir))throw new RuntimeException('private_dir indica un file: occorre una cartella.');
  if(!is_writable($dir))throw new RuntimeException('La cartella deposito non è scrivibile da PHP. Verificare proprietario e permessi con WinSCP.');
- if($dir===realpath($standard)){
+ if($normalize($dir)===$standardNormalized){
   // Ripristina soltanto la protezione mancante: non sovrascrive regole esistenti.
   $rules=$dir.'/.htaccess';
   if(!file_exists($rules)){
