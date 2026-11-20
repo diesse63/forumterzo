@@ -2,6 +2,12 @@
 
 Il supervisore può creare un nuovo amministratore dal browser, anche quando tutti gli accessi ordinari sono bloccati. È un intervento sugli accessi che richiede PHP, MySQL, la configurazione utenti e il relativo motore di cifratura funzionanti. L’esportazione si avvia da Servizi → Backup cifrato con un amministratore autenticato.
 
+## Hosting di prova e sito definitivo
+
+Usare il sito di prova per il collaudo. I nuovi percorsi sono relativi al dominio del sito e presuppongono che l’applicazione sia installata nella cartella principale. L’indirizzo definitivo può essere scelto dopo il collaudo.
+
+Per il nuovo hosting Altervista, impostare la connessione di produzione in `private/config.php` e verificare HTTPS, PHP, PDO MySQL, ZIP AES-256 e la protezione della cartella privata. Generare credenziali del supervisore distinte da quelle di prova. Per ripristinare dati cifrati da un backup, usare invece le chiavi originali abbinate a quel database. Prima del passaggio, controllare anche gli eventuali URL assoluti configurati nelle altre funzioni del gestionale.
+
 ## Preparazione del referente tecnico
 
 1. Installare la modifica su una copia isolata con la versione di PHP e MySQL della produzione. Applicare `utenti/migrazione_supervisore.sql`. La migrazione aggiunge il registro dei codici utilizzati. `Utenti` e `SupervisoreRecuperi` devono usare InnoDB.
