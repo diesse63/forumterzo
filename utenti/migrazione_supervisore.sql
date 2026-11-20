@@ -1,0 +1,5 @@
+CREATE TABLE IF NOT EXISTS SupervisoreRecuperi (
+    TokenHash CHAR(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL PRIMARY KEY,
+    UtenteID BIGINT NOT NULL,
+    CreazioneUTC DATETIME NOT NULL
+) ENGINE=InnoDB;
