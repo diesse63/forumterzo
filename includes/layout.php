@@ -38,6 +38,7 @@ function layout_start(string $title, string $description='', array $context=[], 
   if(allowed($user,'confronto_contacts'))$mail[]=['label'=>'Confronto contacts','url'=>'/report_contacts.php'];
   if($mail)$services[]=['label'=>'Gestione mail','children'=>$mail];
   if(in_array($user['Ruolo'],['admin','ghost'],true))$services[]=['label'=>'Cifratura dati','url'=>'/cifratura_dati.php'];
+  if($user['Ruolo']==='admin')$services[]=['label'=>'Backup cifrato','url'=>'/backup_ripristino.php'];
   if($user['Ruolo']!=='ghost')$services[]=['label'=>'Cambia password','url'=>'/cambia_password.php'];
   if($services)$items[]=['label'=>'Servizi','children'=>$services];
   $items[]=['label'=>'Sessione','children'=>[['label'=>'Esci','url'=>'/logout.php']]];
