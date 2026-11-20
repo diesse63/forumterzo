@@ -38,17 +38,59 @@ try{
   $db->commit();header('Location: /utenti.php?salvato=1');exit;
  }
 }catch(Throwable $e){if($db->inTransaction())$db->rollBack();$message=$e instanceof PDOException?'Salvataggio non riuscito: nome già usato o errore database.':$e->getMessage();}
-$selected=(int)($_GET['id']??0);$edit=null;$perms=[];
+$selected=(int)($_GET['id']??0);
+$edit=null;
+$perms=[];
+$editError='';
+$listError='';
+$rows=[];
+
 if($selected){
- $q=$db->prepare('SELECT * FROM Utenti WHERE ID=?');$q->execute([$selected]);$edit=$q->fetch();
- if($edit){$edit['Profilo']=user_decrypt($edit['ProfiloCifrato']);$q=$db->prepare('SELECT Pannello,Livello FROM UtentiPermessi WHERE UtenteID=?');$q->execute([$selected]);$perms=$q->fetchAll(PDO::FETCH_KEY_PAIR);}
+ try{
+  $q=$db->prepare('SELECT * FROM Utenti WHERE ID=?');
+  $q->execute([$selected]);
+  $candidate=$q->fetch();
+  if($candidate){
+   $candidate['Profilo']=user_decrypt($candidate['ProfiloCifrato']);
+   $q=$db->prepare('SELECT Pannello,Livello FROM UtentiPermessi WHERE UtenteID=?');
+   $q->execute([$selected]);
+   $perms=$q->fetchAll(PDO::FETCH_KEY_PAIR);
+   $edit=$candidate;
+  }
+ }catch(Throwable $e){
+  error_log('POImanager: apertura utente ID '.$selected.' fallita ('.get_class($e).').');
+  $editError='Impossibile aprire questo utente in modifica. Puoi creare un nuovo utente.';
+ }
 }
+
+try{
+ $rows=$db->query('SELECT ID, ProfiloCifrato, Ruolo, Attivo FROM Utenti ORDER BY ID')->fetchAll();
+}catch(PDOException $e){
+ error_log('POImanager: lettura elenco Utenti fallita (SQLSTATE '.$e->getCode().').');
+ $listError='Impossibile leggere l’elenco degli utenti dal database.';
+}
+
 page_start('Gestione utenti');
 if($message)echo '<aside>'.uh($message).'</aside>';
+if($editError)echo '<aside>'.uh($editError).'</aside>';
 if(isset($_GET['salvato']))echo '<aside>Utente e permessi salvati. Le sue sessioni precedenti sono invalidate.</aside>';
-echo '<p><a href="/utenti.php">Nuovo utente</a>. Ruoli esterni sempre disattivati. Ghost è configurato fuori dal database.</p><table><tr><th>Nome</th><th>Email</th><th>Ruolo</th><th>Stato</th><th></th></tr>';
-foreach($db->query('SELECT * FROM Utenti ORDER BY ID') as $row){
- $p=user_decrypt($row['ProfiloCifrato']);echo '<tr><td>'.uh($p['nome']).'</td><td>'.uh($p['email']).'</td><td>'.uh($row['Ruolo']).'</td><td>'.((int)$row['Attivo']?'Attivo':'Disattivato').'</td><td><a href="?id='.(int)$row['ID'].'">Modifica</a></td></tr>';
+echo '<p><a href="/utenti.php">Nuovo utente</a>. Ruoli esterni sempre disattivati. Ghost è configurato fuori dal database.</p>';
+if($listError)echo '<aside>'.uh($listError).'</aside>';
+echo '<table><tr><th>Nome</th><th>Email</th><th>Ruolo</th><th>Stato</th><th></th></tr>';
+foreach($rows as $row){
+ $id=(int)$row['ID'];
+ $action='';
+ try{
+  $profile=user_decrypt($row['ProfiloCifrato']);
+  $name=$profile['nome']??'';
+  $email=$profile['email']??'';
+  $action='<a href="?id='.$id.'">Modifica</a>';
+ }catch(Throwable $e){
+  error_log('POImanager: profilo utente ID '.$id.' illeggibile ('.get_class($e).').');
+  $name='Profilo non leggibile (ID '.$id.')';
+  $email='';
+ }
+ echo '<tr><td>'.uh($name).'</td><td>'.uh($email).'</td><td>'.uh($row['Ruolo']).'</td><td>'.((int)$row['Attivo']?'Attivo':'Disattivato').'</td><td>'.$action.'</td></tr>';
 }
 echo '</table>'; ?>
 <?php require __DIR__.'/includes/utenti_form.php'; ?>
